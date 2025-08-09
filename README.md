@@ -136,14 +136,18 @@ Config:
 - [x] Concurrency controls (max agents, CPU/GPU budget)
 
 Config:
+
 - `MAX_AGENTS=3`, `AGENT_TIMEOUT_S=1.5`, `DEBATE_ROUNDS=1`, `PARALLEL_MODE=async|ray`
 
 ### v0.8.0 — Epic7 presets and loops
 
-- [ ] Resolution/DPI presets and UI anchors for Epic7
-- [ ] Daily mission flow (end‑to‑end)
-- [ ] Stage farming loop with stamina checks
-- [ ] Event detection and routing preferences
+- [x] Resolution/DPI presets and UI anchors for Epic7
+- [x] Daily mission flow (end‑to‑end)
+- [x] Stage farming loop with stamina checks (basic attempt)
+- [x] Event detection and routing preferences (anchor‑based)
+
+Usage:
+- `from app.games.epic7.loops import run_daily_missions` then call `run_daily_missions(max_steps=5)`
 
 ### v0.9.0 — Telemetry and analytics
 

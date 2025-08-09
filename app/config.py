@@ -45,5 +45,8 @@ class Settings(BaseSettings):
     risk_score_threshold: float = Field(default=0.5, alias="RISK_SCORE_THRESHOLD")
     safety_templates_dir: str = Field(default="app/safety/templates", alias="SAFETY_TEMPLATES_DIR")
 
+    # Routing preferences
+    prefer_events: bool = Field(default=False, alias="PREFER_EVENTS")
+
 
 settings = Settings()
