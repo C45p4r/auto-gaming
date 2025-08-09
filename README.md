@@ -27,6 +27,88 @@ Status: Planning. This repository currently contains only the README and Git met
 - Add safety guards to block IAP/payment flows and risky navigation.
 - Decide on tooling (Python 3.11+, packaging, testing, linting, CI) and UI stack.
 
+## Versioned roadmap and TODOs
+
+Version numbers mark grouped milestones. Minor features that compose a major capability are listed as checkboxes to track progress.
+
+### v0.1.0 — Foundations (repo, configs, capture + OCR)
+- [ ] Git + CI skeleton (lint, format, type-check)
+- [ ] Config system with `.env` and typed settings
+- [ ] Emulator connector (ADB) with device discovery
+- [ ] Screen capture loop (configurable FPS)
+- [ ] Baseline OCR adapter (Tesseract) with language packs
+- [ ] Structured logging to JSON; log rotation
+- [ ] CLI: capture one frame, run OCR, dump JSON
+
+### v0.2.0 — State encoder and metrics
+- [ ] Parse common UI elements (buttons, counters, mission text)
+- [ ] State encoder: normalized features and timestamps
+- [ ] Metrics registry: define `daily_progress`, `resource_safety`, `farm_efficiency`, `arena_focus`
+- [ ] Scoring function with weights; config surface in `.env`
+- [ ] Unit tests for metrics and state encoding
+
+### v0.3.0 — Memory and web knowledge
+- [ ] Web search ingestion (guides/events) with rate limits
+- [ ] Summarization into structured facts (title, source, claims)
+- [ ] Embeddings index (FAISS/Chroma); cosine search
+- [ ] SQLite store for structured memories and observations
+- [ ] Retrieval API: given state, return top‑k relevant memories
+
+### v0.4.0 — Planner v1 and action executor
+- [ ] Heuristic policy using metrics + memory signals
+- [ ] Action schema (tap, swipe, wait, back)
+- [ ] Input executor (ADB) with retries and backoff
+- [ ] Safety checks before/after action (screen diff, guard rails)
+- [ ] Rollback/escape sequence (close dialogs, return home)
+
+### v0.5.0 — UI Alpha
+- [ ] WebSocket telemetry stream
+- [ ] Status panel (current task, confidence, next step)
+- [ ] Decision log with reasons and metric deltas
+- [ ] Memory browser (search, view provenance)
+- [ ] Manual guidance (simple nudges/priorities)
+
+### v0.6.0 — Safety and non‑monetization hardening
+- [ ] Purchase UI detection templates and OCR keywords
+- [ ] Hard block on IAP flows; auto‑dismiss dialogs
+- [ ] Risk scoring and quarantine mode
+- [ ] Safety test suite (golden screenshots)
+
+### v0.7.0 — Parallelism and multi‑agent
+- [ ] Orchestrator (async/Ray) with time‑boxed tasks
+- [ ] Specialist agents (policy‑lite, guide‑reader, mechanics‑expert)
+- [ ] Judge/critic with consensus selection
+- [ ] Result caching keyed by state hash
+- [ ] Concurrency controls (max agents, CPU/GPU budget)
+
+### v0.8.0 — Epic7 presets and loops
+- [ ] Resolution/DPI presets and UI anchors for Epic7
+- [ ] Daily mission flow (end‑to‑end)
+- [ ] Stage farming loop with stamina checks
+- [ ] Event detection and routing preferences
+
+### v0.9.0 — Telemetry and analytics
+- [ ] Metrics dashboard (graphs, trends)
+- [ ] Session replay: step through screenshots, actions, decisions
+- [ ] Export/import profiles (config, weights, presets)
+
+### v1.0.0 — Beta release
+- [ ] End‑to‑end stability pass and error budgets
+- [ ] Documentation (setup, safety, UI, configs)
+- [ ] Installer scripts (backend + UI)
+- [ ] Release notes and versioned config templates
+
+### Stretch goals (post‑1.0)
+- [ ] RL policy (PPO) trained on offline logs and safe online finetuning
+- [ ] Object detection for UI components beyond OCR
+- [ ] Multi‑device support; Windows/Linux hosts
+- [ ] Scenario editor for custom task graphs
+
+Definition of Done per version:
+- Major features and all listed checkboxes are completed and tested
+- Safety guards verified; no IAP actions possible
+- Docs updated (README, config samples, UI screenshots)
+
 ## Planned structure
 
 - `src/` — core package (environment wrappers, decision loop, models, training).
@@ -151,16 +233,19 @@ Design notes:
 Hugging Face can power one or more agents in the parallel strategy: a fast local policy, a retrieval‑augmented guide reader, and/or a stronger remote judge.
 
 - Modes of use
+
   - Local models (offline‑capable): `transformers` pipelines or `AutoModel*` + `bitsandbytes`/`accelerate`.
   - Hosted inference: `huggingface_hub.InferenceClient` (Serverless Inference API) or managed Inference Endpoints (TGI).
   - Embeddings: `sentence-transformers` from the Hub for vector search memory.
 
 - Recommended roles
+
   - Policy‑Lite (local small instruct model): e.g., `mistralai/Mistral-7B-Instruct-v0.3`, `google/gemma-2-2b-it` (quantized for Mac).
   - Guide‑Reader (RA(R)G): the same or slightly larger instruct model, with memory retrieval context.
   - Judge/Critic (remote): larger endpoint model for consensus when decisions are ambiguous.
 
 - Configuration (env)
+
   - `HUGGINGFACE_HUB_TOKEN` — personal access token for the Hub (read access is enough for most public models)
   - `HF_MODEL_ID_POLICY` — default local policy model id
   - `HF_MODEL_ID_JUDGE` — remote judge model id (if using Inference API/Endpoint)
@@ -210,6 +295,7 @@ vectors = embedder.encode(["arena guide text"], normalize_embeddings=True)
 ```
 
 Notes:
+
 - Prefer smaller local models for high‑frequency decisions; escalate to a stronger endpoint only when needed.
 - Cache Hub downloads (`HF_HOME`) and pin model revisions for reproducibility.
 - Respect each model’s license and usage restrictions.
