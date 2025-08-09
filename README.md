@@ -33,13 +33,21 @@ Version numbers mark grouped milestones. Minor features that compose a major cap
 
 ### v0.1.0 — Foundations (repo, configs, capture + OCR)
 
-- [ ] Git + CI skeleton (lint, format, type-check)
-- [ ] Config system with `.env` and typed settings
-- [ ] Emulator connector (ADB) with device discovery
-- [ ] Screen capture loop (configurable FPS)
-- [ ] Baseline OCR adapter (Tesseract) with language packs
-- [ ] Structured logging to JSON; log rotation
-- [ ] CLI: capture one frame, run OCR, dump JSON
+- [x] Git + CI skeleton (lint, format, type-check)
+- [x] Config system with `.env` and typed settings
+- [x] Emulator connector (ADB) with device discovery
+- [x] Screen capture loop (configurable FPS)
+- [x] Baseline OCR adapter (Tesseract) with language packs
+- [x] Structured logging to JSON; log rotation
+- [x] CLI: capture one frame, run OCR, dump JSON
+
+Quickstart (v0.1.0):
+
+- `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
+- `cp env.example .env` then adjust values (e.g., `OCR_LANGUAGE`)
+- Ensure an emulator/device is connected: `adb devices`
+- Capture one frame with OCR: `python -m app.cli capture --output-dir captures`
+- Capture loop at 1 FPS with OCR: `python -m app.cli capture-loop --fps 1 --ocr --count 5`
 
 ### v0.2.0 — State encoder and metrics
 

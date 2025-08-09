@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.routes.telemetry import router as telemetry_router
 
 
@@ -24,5 +25,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-
