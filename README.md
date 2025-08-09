@@ -51,11 +51,21 @@ Quickstart (v0.1.0):
 
 ### v0.2.0 — State encoder and metrics
 
-- [ ] Parse common UI elements (buttons, counters, mission text)
-- [ ] State encoder: normalized features and timestamps
-- [ ] Metrics registry: define `daily_progress`, `resource_safety`, `farm_efficiency`, `arena_focus`
-- [ ] Scoring function with weights; config surface in `.env`
-- [ ] Unit tests for metrics and state encoding
+- [x] Parse common UI elements (buttons, counters, mission text)
+- [x] State encoder: normalized features and timestamps
+- [x] Metrics registry: define `daily_progress`, `resource_safety`, `farm_efficiency`, `arena_focus`
+- [x] Scoring function with weights; config surface in `.env`
+- [x] Unit tests for metrics and state encoding
+
+Usage:
+- Encode a state from a captured image via code:
+  - `from app.state.encoder import encode_state, to_features`
+  - `state = encode_state(Image.open('captures/frame_x.png'))`
+  - `features = to_features(state)`
+- Compute and score metrics:
+  - `from app.metrics.registry import compute_metrics, score_metrics`
+  - `metrics = compute_metrics(state)`
+  - `score = score_metrics(metrics)`
 
 ### v0.3.0 — Memory and web knowledge
 
