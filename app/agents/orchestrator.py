@@ -7,6 +7,7 @@ from app.config import settings
 from app.policy.heuristic import propose_action
 from app.config import settings
 from app.services.hf.policy import HFPolicy
+from app.services.hf.judge import HFJudge
 from app.state.encoder import GameState
 
 Candidate = tuple[float, object, str]
@@ -51,6 +52,14 @@ def agent_guide_reader(state: GameState) -> Candidate:
 
 
 def vote(candidates: list[Candidate]) -> Candidate:
+    # If HF judge is configured, defer selection
+    if settings.hf_model_id_judge:
+        try:
+            judge = HFJudge()
+            # We need a GameState to include OCR in the prompt; here we fallback to local vote.
+            # The orchestrate() caller has the state; so judge integration will happen there instead.
+        except Exception:
+            pass
     # Weighted by score; break ties by fixed priority
     if not candidates:
         raise RuntimeError("No candidates proposed")
@@ -76,4 +85,12 @@ async def orchestrate(state: GameState) -> Candidate:
 
     if not round_candidates:
         raise RuntimeError("No candidates after debate rounds")
+    # Use HF judge if configured
+    if settings.hf_model_id_judge:
+        try:
+            judge = HFJudge()
+            idx, _reason = judge.select(state, round_candidates)
+            return round_candidates[idx]
+        except Exception:
+            pass
     return vote(round_candidates)

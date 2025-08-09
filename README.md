@@ -380,11 +380,11 @@ embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 vectors = embedder.encode(["arena guide text"], normalize_embeddings=True)
 ```
 
-Runtime integration (enable HF policy agent):
+Runtime integration (enable HF agents):
 
-- Set `HF_MODEL_ID_POLICY` in `.env` to enable the Hugging Face–backed policy. The system will auto-load a local `transformers` pipeline or use `huggingface_hub.InferenceClient` when `HF_INFERENCE_ENDPOINT_URL` is set.
+- Policy agent: set `HF_MODEL_ID_POLICY` in `.env`. The system auto-loads a local `transformers` pipeline or uses `huggingface_hub.InferenceClient` when `HF_INFERENCE_ENDPOINT_URL` is set. Falls back to heuristic on errors.
+- Judge agent: set `HF_MODEL_ID_JUDGE` to enable candidate selection via HF. Falls back to score-based vote on errors.
 - Optionally set `HUGGINGFACE_HUB_TOKEN` for gated models/endpoints.
-- If any error occurs or the env is unset, the system falls back to the built‑in heuristic policy.
 
 Notes:
 
