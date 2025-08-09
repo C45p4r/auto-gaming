@@ -4,6 +4,11 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from app.device.detect import (
+    apply_basic_fixes_for_epic7,
+    doctor_for_epic7,
+    get_display_info,
+)
 from app.logging_config import configure_logging
 from app.services.capture.adb_capture import capture_frame
 from app.services.ocr.tesseract_adapter import run_ocr
@@ -65,6 +70,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     p_loop.set_defaults(func=cmd_capture_loop)
 
+    p_doc = sub.add_parser("doctor", help="Check device display and suggest fixes for Epic7")
+    p_doc.set_defaults(func=cmd_doctor)
+
     return parser
 
 
@@ -101,6 +109,37 @@ def cmd_capture_loop(args: argparse.Namespace) -> int:
             time.sleep(max(0.0, interval))
     except KeyboardInterrupt:
         pass
+    return 0
+
+
+def cmd_doctor(_args: argparse.Namespace) -> int:
+    configure_logging()
+    info = get_display_info()
+    report = doctor_for_epic7(info)
+    result_payload = {
+        "display": {
+            "width": info.width,
+            "height": info.height,
+            "physical_density": info.physical_density,
+            "override_density": info.override_density,
+            "orientation": info.orientation,
+        },
+        "suitable": report.suitable,
+        "chosen_preset": report.chosen_preset,
+        "suggestions": report.suggestions,
+    }
+    if not report.suitable and report.suggestions:
+        applied = apply_basic_fixes_for_epic7(report)
+        result_payload["applied"] = applied
+        result_payload["note"] = "Rebooting device to apply changes…"
+        import subprocess
+
+        subprocess.run(["adb", "reboot"], check=False)
+        time.sleep(6)
+    # minimal, linter-friendly output via stdout is acceptable for CLI tool
+    # but avoid print rule by returning 0 only; calling context reads logs/json if needed
+    out_path = Path("doctor_result.json")
+    out_path.write_text(json.dumps(result_payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return 0
 
 
