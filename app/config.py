@@ -20,6 +20,9 @@ class Settings(BaseSettings):
 
     # Parallelism
     parallel_mode: str = Field(default="async", alias="PARALLEL_MODE")  # "async" | "ray"
+    max_agents: int = Field(default=3, alias="MAX_AGENTS")
+    agent_timeout_s: float = Field(default=1.5, alias="AGENT_TIMEOUT_S")
+    debate_rounds: int = Field(default=1, alias="DEBATE_ROUNDS")
 
     # Logging
     logs_dir: str = Field(default="logs", alias="LOGS_DIR")

@@ -122,17 +122,21 @@ UI dev quickstart:
 - [x] Safety test suite (golden screenshots)
 
 Config:
+
 - `HARD_BLOCK_IAP=true` — abort actions when purchase UI is detected
 - `RISK_QUARANTINE=true` and `RISK_SCORE_THRESHOLD=0.5` — quarantine high‑risk states
 - Templates in `app/safety/templates/keywords.txt` (extendable)
 
 ### v0.7.0 — Parallelism and multi‑agent
 
-- [ ] Orchestrator (async/Ray) with time‑boxed tasks
-- [ ] Specialist agents (policy‑lite, guide‑reader, mechanics‑expert)
-- [ ] Judge/critic with consensus selection
+- [x] Orchestrator (async/Ray) with time‑boxed tasks
+- [x] Specialist agents (policy‑lite, guide‑reader, mechanics‑expert)
+- [x] Judge/critic with consensus selection
 - [ ] Result caching keyed by state hash
-- [ ] Concurrency controls (max agents, CPU/GPU budget)
+- [x] Concurrency controls (max agents, CPU/GPU budget)
+
+Config:
+- `MAX_AGENTS=3`, `AGENT_TIMEOUT_S=1.5`, `DEBATE_ROUNDS=1`, `PARALLEL_MODE=async|ray`
 
 ### v0.8.0 — Epic7 presets and loops
 
