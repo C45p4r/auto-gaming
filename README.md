@@ -146,6 +146,74 @@ Design notes:
 - Tooling: Poetry or uv/pip-tools for Python deps; pnpm/npm/yarn for UI; pre-commit, ruff/black, mypy
 - Caching/coordination: Redis for cache/pubsub; structured logs to JSON files or OpenTelemetry
 
+## Hugging Face as AI agents
+
+Hugging Face can power one or more agents in the parallel strategy: a fast local policy, a retrieval‑augmented guide reader, and/or a stronger remote judge.
+
+- Modes of use
+  - Local models (offline‑capable): `transformers` pipelines or `AutoModel*` + `bitsandbytes`/`accelerate`.
+  - Hosted inference: `huggingface_hub.InferenceClient` (Serverless Inference API) or managed Inference Endpoints (TGI).
+  - Embeddings: `sentence-transformers` from the Hub for vector search memory.
+
+- Recommended roles
+  - Policy‑Lite (local small instruct model): e.g., `mistralai/Mistral-7B-Instruct-v0.3`, `google/gemma-2-2b-it` (quantized for Mac).
+  - Guide‑Reader (RA(R)G): the same or slightly larger instruct model, with memory retrieval context.
+  - Judge/Critic (remote): larger endpoint model for consensus when decisions are ambiguous.
+
+- Configuration (env)
+  - `HUGGINGFACE_HUB_TOKEN` — personal access token for the Hub (read access is enough for most public models)
+  - `HF_MODEL_ID_POLICY` — default local policy model id
+  - `HF_MODEL_ID_JUDGE` — remote judge model id (if using Inference API/Endpoint)
+  - `HF_INFERENCE_ENDPOINT_URL` — optional TGI endpoint URL for hosted inference
+
+- Local generation (policy agent)
+
+```python
+from transformers import pipeline
+
+policy = pipeline(
+    "text-generation",
+    model="mistralai/Mistral-7B-Instruct-v0.3",
+    device_map="auto",
+    torch_dtype="auto"
+)
+
+prompt = "You are the game policy. Given state and metrics, propose the next action and estimate metric deltas."
+out = policy(prompt, max_new_tokens=256, do_sample=False)[0]["generated_text"]
+```
+
+- Hosted inference (judge/critic)
+
+```python
+import os
+from huggingface_hub import InferenceClient
+
+client = InferenceClient(
+    model=os.getenv("HF_MODEL_ID_JUDGE", "meta-llama/Llama-3.1-8B-Instruct"),
+    token=os.getenv("HUGGINGFACE_HUB_TOKEN"),
+)
+
+judgment = client.text_generation(
+    prompt="Critique and pick the best action among candidates with reasons",
+    max_new_tokens=256,
+    temperature=0.2,
+)
+```
+
+- Embeddings for memory
+
+```python
+from sentence_transformers import SentenceTransformer
+
+embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+vectors = embedder.encode(["arena guide text"], normalize_embeddings=True)
+```
+
+Notes:
+- Prefer smaller local models for high‑frequency decisions; escalate to a stronger endpoint only when needed.
+- Cache Hub downloads (`HF_HOME`) and pin model revisions for reproducibility.
+- Respect each model’s license and usage restrictions.
+
 ## Setup outline
 
 Prerequisites:
