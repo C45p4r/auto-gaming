@@ -5,6 +5,8 @@ from collections.abc import Callable
 
 from app.config import settings
 from app.policy.heuristic import propose_action
+from app.config import settings
+from app.services.hf.policy import HFPolicy
 from app.state.encoder import GameState
 
 Candidate = tuple[float, object, str]
@@ -18,7 +20,21 @@ async def run_with_timeout(fn: Callable[[], Candidate], timeout_s: float) -> Can
         return None
 
 
+_hf_policy: HFPolicy | None = None
+
+
 def agent_policy(state: GameState) -> Candidate:
+    global _hf_policy
+    # Try HF policy if configured
+    if settings.hf_model_id_policy:
+        try:
+            if _hf_policy is None:
+                _hf_policy = HFPolicy()
+            proposal = _hf_policy.propose(state)
+            return proposal.score, proposal.action, proposal.who
+        except Exception:
+            pass
+    # Fallback to heuristic
     score, action = propose_action(state)
     return score, action, "policy-lite"
 
