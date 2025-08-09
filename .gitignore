@@ -22,3 +22,21 @@ wandb/
 # PyCharm / VSCode
 .idea/
 .vscode/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+# Env
+.env
+.env.*
+# Mac
+.DS_Store

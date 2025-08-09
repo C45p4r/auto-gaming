@@ -32,6 +32,7 @@ Status: Planning. This repository currently contains only the README and Git met
 Version numbers mark grouped milestones. Minor features that compose a major capability are listed as checkboxes to track progress.
 
 ### v0.1.0 — Foundations (repo, configs, capture + OCR)
+
 - [ ] Git + CI skeleton (lint, format, type-check)
 - [ ] Config system with `.env` and typed settings
 - [ ] Emulator connector (ADB) with device discovery
@@ -41,6 +42,7 @@ Version numbers mark grouped milestones. Minor features that compose a major cap
 - [ ] CLI: capture one frame, run OCR, dump JSON
 
 ### v0.2.0 — State encoder and metrics
+
 - [ ] Parse common UI elements (buttons, counters, mission text)
 - [ ] State encoder: normalized features and timestamps
 - [ ] Metrics registry: define `daily_progress`, `resource_safety`, `farm_efficiency`, `arena_focus`
@@ -48,6 +50,7 @@ Version numbers mark grouped milestones. Minor features that compose a major cap
 - [ ] Unit tests for metrics and state encoding
 
 ### v0.3.0 — Memory and web knowledge
+
 - [ ] Web search ingestion (guides/events) with rate limits
 - [ ] Summarization into structured facts (title, source, claims)
 - [ ] Embeddings index (FAISS/Chroma); cosine search
@@ -55,6 +58,7 @@ Version numbers mark grouped milestones. Minor features that compose a major cap
 - [ ] Retrieval API: given state, return top‑k relevant memories
 
 ### v0.4.0 — Planner v1 and action executor
+
 - [ ] Heuristic policy using metrics + memory signals
 - [ ] Action schema (tap, swipe, wait, back)
 - [ ] Input executor (ADB) with retries and backoff
@@ -62,6 +66,7 @@ Version numbers mark grouped milestones. Minor features that compose a major cap
 - [ ] Rollback/escape sequence (close dialogs, return home)
 
 ### v0.5.0 — UI Alpha
+
 - [ ] WebSocket telemetry stream
 - [ ] Status panel (current task, confidence, next step)
 - [ ] Decision log with reasons and metric deltas
@@ -69,12 +74,14 @@ Version numbers mark grouped milestones. Minor features that compose a major cap
 - [ ] Manual guidance (simple nudges/priorities)
 
 ### v0.6.0 — Safety and non‑monetization hardening
+
 - [ ] Purchase UI detection templates and OCR keywords
 - [ ] Hard block on IAP flows; auto‑dismiss dialogs
 - [ ] Risk scoring and quarantine mode
 - [ ] Safety test suite (golden screenshots)
 
 ### v0.7.0 — Parallelism and multi‑agent
+
 - [ ] Orchestrator (async/Ray) with time‑boxed tasks
 - [ ] Specialist agents (policy‑lite, guide‑reader, mechanics‑expert)
 - [ ] Judge/critic with consensus selection
@@ -82,29 +89,34 @@ Version numbers mark grouped milestones. Minor features that compose a major cap
 - [ ] Concurrency controls (max agents, CPU/GPU budget)
 
 ### v0.8.0 — Epic7 presets and loops
+
 - [ ] Resolution/DPI presets and UI anchors for Epic7
 - [ ] Daily mission flow (end‑to‑end)
 - [ ] Stage farming loop with stamina checks
 - [ ] Event detection and routing preferences
 
 ### v0.9.0 — Telemetry and analytics
+
 - [ ] Metrics dashboard (graphs, trends)
 - [ ] Session replay: step through screenshots, actions, decisions
 - [ ] Export/import profiles (config, weights, presets)
 
 ### v1.0.0 — Beta release
+
 - [ ] End‑to‑end stability pass and error budgets
 - [ ] Documentation (setup, safety, UI, configs)
 - [ ] Installer scripts (backend + UI)
 - [ ] Release notes and versioned config templates
 
 ### Stretch goals (post‑1.0)
+
 - [ ] RL policy (PPO) trained on offline logs and safe online finetuning
 - [ ] Object detection for UI components beyond OCR
 - [ ] Multi‑device support; Windows/Linux hosts
 - [ ] Scenario editor for custom task graphs
 
 Definition of Done per version:
+
 - Major features and all listed checkboxes are completed and tested
 - Safety guards verified; no IAP actions possible
 - Docs updated (README, config samples, UI screenshots)
