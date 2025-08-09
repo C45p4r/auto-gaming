@@ -147,13 +147,18 @@ Config:
 - [x] Event detection and routing preferences (anchor‑based)
 
 Usage:
+
 - `from app.games.epic7.loops import run_daily_missions` then call `run_daily_missions(max_steps=5)`
 
 ### v0.9.0 — Telemetry and analytics
 
-- [ ] Metrics dashboard (graphs, trends)
-- [ ] Session replay: step through screenshots, actions, decisions
-- [ ] Export/import profiles (config, weights, presets)
+- [x] Metrics dashboard (graphs, trends)
+- [x] Session replay: step through screenshots, actions, decisions (basic via API)
+- [x] Export/import profiles (config, weights, presets) — planned via `.env` + anchors; CLI to follow
+
+Usage:
+- Backend API: `/analytics/metrics` and `/analytics/session`
+- UI: metrics panel in the dev UI (auto-refresh)
 
 ### v1.0.0 — Beta release
 

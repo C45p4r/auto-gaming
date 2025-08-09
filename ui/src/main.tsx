@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { MetricsChart } from "./components/Charts";
 import { createRoot } from "react-dom/client";
 
 type TelemetryMsg = { type: "status"; data: { task: string | null; confidence: number | null; next: string | null } } | { type: "decision"; data: any } | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } };
@@ -45,6 +46,9 @@ function App() {
             </li>
           ))}
         </ul>
+      </section>
+      <section>
+        <MetricsChart />
       </section>
     </div>
   );

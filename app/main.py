@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routes.analytics import router as analytics_router
 from app.routes.telemetry import router as telemetry_router
 
 
@@ -20,6 +21,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(telemetry_router)
+    app.include_router(analytics_router)
 
     return app
 
