@@ -157,6 +157,7 @@ Usage:
 - [x] Export/import profiles (config, weights, presets) — planned via `.env` + anchors; CLI to follow
 
 Usage:
+
 - Backend API: `/analytics/metrics` and `/analytics/session`
 - UI: metrics panel in the dev UI (auto-refresh)
 

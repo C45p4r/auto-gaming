@@ -37,9 +37,11 @@ class MemoryStore:
         )
         self._conn.commit()
 
-        self._embedder = SentenceTransformer(settings.embedding_model_id)
+        self._embedder: SentenceTransformer | None = None
         self._index: faiss.IndexFlatIP | None = None
         self._embeddings: np.ndarray | None = None
+        # Cached rows: (id, title, source_url, summary)
+        self._rows: list[tuple[int, str, str, str]] | None = None
 
     def add_facts(self, facts: Sequence[Fact]) -> list[int]:
         cur = self._conn.cursor()
@@ -58,20 +60,25 @@ class MemoryStore:
         # refresh index lazily
         self._index = None
         self._embeddings = None
+        self._rows = None
         return ids
 
     def _ensure_index(self) -> None:
-        if self._index is not None and self._embeddings is not None:
+        if self._index is not None and self._embeddings is not None and self._rows is not None:
             return
-        rows = list(
-            self._conn.execute("SELECT id, title, summary FROM facts ORDER BY id ASC").fetchall()
+        rows_full = list(
+            self._conn.execute(
+                "SELECT id, title, source_url, summary FROM facts ORDER BY id ASC"
+            ).fetchall()
         )
-        if not rows:
+        self._rows = rows_full
+        if not rows_full:
             self._index = faiss.IndexFlatIP(384)
             self._embeddings = np.zeros((0, 384), dtype="float32")
             return
-        corpus = [f"{title}. {summary}" for (_id, title, summary) in rows]
-        embs = self._embedder.encode(corpus, normalize_embeddings=True)
+        embedder = self._get_embedder()
+        corpus = [f"{title}. {summary}" for (_id, title, _src, summary) in rows_full]
+        embs = embedder.encode(corpus, normalize_embeddings=True)
         vecs = np.asarray(embs, dtype="float32")
         self._embeddings = vecs
         self._index = faiss.IndexFlatIP(vecs.shape[1])
@@ -81,18 +88,23 @@ class MemoryStore:
         self._ensure_index()
         assert self._index is not None
         assert self._embeddings is not None
-        q = self._embedder.encode([query], normalize_embeddings=True).astype("float32")
+        embedder = self._get_embedder()
+        q = embedder.encode([query], normalize_embeddings=True).astype("float32")
         scores, idxs = self._index.search(q, top_k)
         results: list[Fact] = []
         if idxs.size == 0:
             return results
-        # Map FAISS indices to DB ids (1-based, ordered by id ASC)
-        id_rows = list(
-            self._conn.execute("SELECT id, title, source_url, summary FROM facts ORDER BY id ASC")
-        )
+        # Map FAISS indices directly to cached rows
+        assert self._rows is not None
+        id_rows = self._rows
         for i in idxs[0]:
             if i < 0 or i >= len(id_rows):
                 continue
             row = id_rows[int(i)]
             results.append(Fact(id=row[0], title=row[1], source_url=row[2], summary=row[3]))
         return results
+
+    def _get_embedder(self) -> SentenceTransformer:
+        if self._embedder is None:
+            self._embedder = SentenceTransformer(settings.embedding_model_id)
+        return self._embedder
