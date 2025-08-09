@@ -1,19 +1,28 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from PIL import Image, ImageChops
 
+from app.config import settings
 from app.perception.parser import ocr_lines
 
-PURCHASE_KEYWORDS = {
-    "purchase",
-    "buy",
-    "limited pack",
-    "monthly pass",
-    "top up",
-    "confirm purchase",
-}
+
+def load_purchase_keywords() -> set[str]:
+    file_path = Path(settings.safety_templates_dir) / "keywords.txt"
+    if file_path.exists():
+        content = file_path.read_text(encoding="utf-8")
+        return {line.strip().lower() for line in content.splitlines() if line.strip()}
+    # fallback defaults
+    return {
+        "purchase",
+        "buy",
+        "limited pack",
+        "monthly pass",
+        "top up",
+        "confirm purchase",
+    }
 
 
 @dataclass(frozen=True)
@@ -25,7 +34,13 @@ class SafetyReport:
 def detect_purchase_ui(image: Image.Image) -> bool:
     parsed = ocr_lines(image)
     text = " ".join(parsed.lines).lower()
-    return any(kw in text for kw in PURCHASE_KEYWORDS)
+    return detect_purchase_text(text)
+
+
+def detect_purchase_text(text: str) -> bool:
+    keywords = load_purchase_keywords()
+    t = text.lower()
+    return any(kw in t for kw in keywords)
 
 
 def screen_change(prev: Image.Image, cur: Image.Image, diff_threshold: float = 0.10) -> bool:

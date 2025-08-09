@@ -110,15 +110,21 @@ Usage:
 - [x] Manual guidance (simple nudges/priorities)
 
 UI dev quickstart:
+
 - `cd ui && pnpm install` (or npm/yarn)
 - `pnpm dev` (proxies to `http://localhost:8000` for `/telemetry`)
 
 ### v0.6.0 — Safety and non‑monetization hardening
 
-- [ ] Purchase UI detection templates and OCR keywords
-- [ ] Hard block on IAP flows; auto‑dismiss dialogs
-- [ ] Risk scoring and quarantine mode
-- [ ] Safety test suite (golden screenshots)
+- [x] Purchase UI detection templates and OCR keywords
+- [x] Hard block on IAP flows; auto‑dismiss dialogs
+- [x] Risk scoring and quarantine mode
+- [x] Safety test suite (golden screenshots)
+
+Config:
+- `HARD_BLOCK_IAP=true` — abort actions when purchase UI is detected
+- `RISK_QUARANTINE=true` and `RISK_SCORE_THRESHOLD=0.5` — quarantine high‑risk states
+- Templates in `app/safety/templates/keywords.txt` (extendable)
 
 ### v0.7.0 — Parallelism and multi‑agent
 

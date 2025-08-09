@@ -36,5 +36,11 @@ class Settings(BaseSettings):
         default="sentence-transformers/all-MiniLM-L6-v2", alias="EMBEDDING_MODEL_ID"
     )
 
+    # Safety
+    hard_block_iap: bool = Field(default=True, alias="HARD_BLOCK_IAP")
+    risk_quarantine: bool = Field(default=True, alias="RISK_QUARANTINE")
+    risk_score_threshold: float = Field(default=0.5, alias="RISK_SCORE_THRESHOLD")
+    safety_templates_dir: str = Field(default="app/safety/templates", alias="SAFETY_TEMPLATES_DIR")
+
 
 settings = Settings()
