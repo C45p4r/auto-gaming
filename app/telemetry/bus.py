@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import asyncio
+from contextlib import suppress
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any
+
+
+@dataclass
+class DecisionLogEntry:
+    timestamp_utc: str
+    action: dict[str, Any]
+    reason: str
+    metric_deltas: dict[str, float]
+
+
+@dataclass
+class Guidance:
+    prioritize: list[str] = field(default_factory=list)
+    avoid: list[str] = field(default_factory=list)
+
+
+class TelemetryBus:
+    def __init__(self) -> None:
+        self._subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
+        self._status: dict[str, Any] = {"task": None, "confidence": None, "next": None}
+        self._decision_log: list[DecisionLogEntry] = []
+        self._guidance: Guidance = Guidance()
+        self._lock = asyncio.Lock()
+
+    async def subscribe(self) -> asyncio.Queue[dict[str, Any]]:
+        q: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        async with self._lock:
+            self._subscribers.add(q)
+        await q.put({"type": "status", "data": self._status})
+        return q
+
+    async def unsubscribe(self, q: asyncio.Queue[dict[str, Any]]) -> None:
+        async with self._lock:
+            self._subscribers.discard(q)
+
+    async def _broadcast(self, message: dict[str, Any]) -> None:
+        async with self._lock:
+            for q in list(self._subscribers):
+                with suppress(Exception):
+                    q.put_nowait(message)
+
+    async def publish_status(
+        self, task: str | None, confidence: float | None, next_step: str | None
+    ) -> None:
+        self._status = {"task": task, "confidence": confidence, "next": next_step}
+        await self._broadcast({"type": "status", "data": self._status})
+
+    async def publish_decision(
+        self, action: dict[str, Any], reason: str, metric_deltas: dict[str, float]
+    ) -> None:
+        entry = DecisionLogEntry(
+            timestamp_utc=datetime.now(tz=UTC).isoformat(),
+            action=action,
+            reason=reason,
+            metric_deltas=metric_deltas,
+        )
+        self._decision_log.append(entry)
+        self._decision_log = self._decision_log[-200:]
+        await self._broadcast({"type": "decision", "data": entry.__dict__})
+
+    async def set_guidance(self, guidance: Guidance) -> None:
+        self._guidance = guidance
+        await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
+
+    def get_status(self) -> dict[str, Any]:
+        return self._status
+
+    def get_decision_log(self) -> list[dict[str, Any]]:
+        return [e.__dict__ for e in self._decision_log]
+
+    def get_guidance(self) -> Guidance:
+        return self._guidance
+
+
+bus = TelemetryBus()

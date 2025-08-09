@@ -96,17 +96,22 @@ Usage:
 - [x] Rollback/escape sequence (close dialogs, return home)
 
 Usage:
+
 - Propose an action: `from app.policy.heuristic import propose_action`
 - Execute: `from app.actions.executor import execute, escape_sequence`
 - Safety checks: `from app.safety.guards import detect_purchase_ui, screen_change`
 
 ### v0.5.0 — UI Alpha
 
-- [ ] WebSocket telemetry stream
-- [ ] Status panel (current task, confidence, next step)
-- [ ] Decision log with reasons and metric deltas
-- [ ] Memory browser (search, view provenance)
-- [ ] Manual guidance (simple nudges/priorities)
+- [x] WebSocket telemetry stream
+- [x] Status panel (current task, confidence, next step)
+- [x] Decision log with reasons and metric deltas
+- [x] Memory browser (search, view provenance) — via REST `/telemetry/memory/search?q=...`
+- [x] Manual guidance (simple nudges/priorities)
+
+UI dev quickstart:
+- `cd ui && pnpm install` (or npm/yarn)
+- `pnpm dev` (proxies to `http://localhost:8000` for `/telemetry`)
 
 ### v0.6.0 — Safety and non‑monetization hardening
 
