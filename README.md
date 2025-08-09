@@ -58,6 +58,7 @@ Quickstart (v0.1.0):
 - [x] Unit tests for metrics and state encoding
 
 Usage:
+
 - Encode a state from a captured image via code:
   - `from app.state.encoder import encode_state, to_features`
   - `state = encode_state(Image.open('captures/frame_x.png'))`
@@ -69,11 +70,21 @@ Usage:
 
 ### v0.3.0 — Memory and web knowledge
 
-- [ ] Web search ingestion (guides/events) with rate limits
-- [ ] Summarization into structured facts (title, source, claims)
-- [ ] Embeddings index (FAISS/Chroma); cosine search
-- [ ] SQLite store for structured memories and observations
-- [ ] Retrieval API: given state, return top‑k relevant memories
+- [x] Web search ingestion (guides/events) with rate limits
+- [x] Summarization into structured facts (title, source, claims)
+- [x] Embeddings index (FAISS/Chroma); cosine search
+- [x] SQLite store for structured memories and observations
+- [x] Retrieval API: given state, return top‑k relevant memories
+
+Usage:
+- Ingest URLs and store summaries:
+  - `from app.services.search.web_ingest import fetch_urls, summarize`
+  - `from app.memory.store import MemoryStore, Fact`
+  - `docs = fetch_urls(["https://example.com/guide"])`
+  - `facts = [Fact(id=None, title=d.title, source_url=d.url, summary=summarize(d)) for d in docs]`
+  - `store = MemoryStore()`; `store.add_facts(facts)`
+- Retrieve relevant facts by query:
+  - `store.search("best farming stage for mats")`
 
 ### v0.4.0 — Planner v1 and action executor
 

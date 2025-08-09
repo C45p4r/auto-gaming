@@ -30,5 +30,11 @@ class Settings(BaseSettings):
     hf_model_id_judge: str | None = Field(default=None, alias="HF_MODEL_ID_JUDGE")
     hf_inference_endpoint_url: str | None = Field(default=None, alias="HF_INFERENCE_ENDPOINT_URL")
 
+    # Memory & knowledge
+    db_path: str = Field(default="data/app.sqlite3", alias="DB_PATH")
+    embedding_model_id: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2", alias="EMBEDDING_MODEL_ID"
+    )
+
 
 settings = Settings()
