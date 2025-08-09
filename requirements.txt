@@ -6,6 +6,8 @@ python-dotenv==1.0.1
 # OCR basics
 pytesseract==0.3.13
 Pillow==10.4.0
+# Pillow's ImageGrab on Windows uses pywin32 indirectly via OS APIs; include pywin32 for robustness
+pywin32==306
 
 # Computer vision / numerical
 opencv-python==4.10.0.84

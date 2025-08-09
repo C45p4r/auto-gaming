@@ -5,7 +5,7 @@ import time
 from app.actions.executor import execute
 from app.actions.types import TapAction
 from app.games.epic7.presets import DEFAULT_PRESET
-from app.services.capture.adb_capture import capture_frame
+from app.services.capture import capture_frame
 from app.state.encoder import encode_state
 
 

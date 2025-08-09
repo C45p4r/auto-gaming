@@ -17,6 +17,24 @@ class Settings(BaseSettings):
 
     # Capture
     capture_fps: float = Field(default=1.0, alias="CAPTURE_FPS")
+    capture_backend: str | None = Field(
+        default=None, alias="CAPTURE_BACKEND"
+    )  # "auto" | "adb" | "window"
+    window_title_hint: str | None = Field(
+        default=r"Google Play Games|Epic Seven|Epic 7", alias="WINDOW_TITLE_HINT"
+    )
+    window_enforce_topmost: bool = Field(default=True, alias="WINDOW_ENFORCE_TOPMOST")
+    window_left: int = Field(default=100, alias="WINDOW_LEFT")
+    window_top: int = Field(default=100, alias="WINDOW_TOP")
+    window_client_width: int = Field(default=1280, alias="WINDOW_CLIENT_WIDTH")
+    window_client_height: int = Field(default=720, alias="WINDOW_CLIENT_HEIGHT")
+
+    # Input
+    input_backend: str | None = Field(
+        default=None, alias="INPUT_BACKEND"
+    )  # "auto" | "adb" | "window"
+    input_base_width: int = Field(default=1080, alias="INPUT_BASE_WIDTH")
+    input_base_height: int = Field(default=1920, alias="INPUT_BASE_HEIGHT")
 
     # Parallelism
     parallel_mode: str = Field(default="async", alias="PARALLEL_MODE")  # "async" | "ray"
@@ -44,9 +62,17 @@ class Settings(BaseSettings):
     risk_quarantine: bool = Field(default=True, alias="RISK_QUARANTINE")
     risk_score_threshold: float = Field(default=0.5, alias="RISK_SCORE_THRESHOLD")
     safety_templates_dir: str = Field(default="app/safety/templates", alias="SAFETY_TEMPLATES_DIR")
+    hard_block_item_changes: bool = Field(
+        default=True, alias="HARD_BLOCK_ITEM_CHANGES"
+    )  # do not sell/remove heroes or equipment
 
     # Routing preferences
     prefer_events: bool = Field(default=False, alias="PREFER_EVENTS")
+
+    # Stability & testing
+    dry_run: bool = Field(default=False, alias="DRY_RUN")
+    max_consec_errors: int = Field(default=5, alias="MAX_CONSEC_ERRORS")
+    error_backoff_s: float = Field(default=2.0, alias="ERROR_BACKOFF_S")
 
 
 settings = Settings()

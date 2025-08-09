@@ -1,6 +1,6 @@
 # auto-gaming
 
-Status: Planning. This repository currently contains only the README and Git metadata while we define the MVP scope.
+Status: Beta v1.0.0 (Windows Emulator). Core features implemented; requires further testing and tuning.
 
 ## Vision
 
@@ -114,6 +114,14 @@ UI dev quickstart:
 - `cd ui && pnpm install` (or npm/yarn)
 - `pnpm dev` (proxies to `http://localhost:8000` for `/telemetry`)
 
+Controls:
+
+- A sticky control bar in the UI provides Start, Pause, Stop buttons to control the agent.
+- Backend endpoints:
+  - `POST /telemetry/control/start`
+  - `POST /telemetry/control/pause`
+  - `POST /telemetry/control/stop`
+
 ### v0.6.0 — Safety and non‑monetization hardening
 
 - [x] Purchase UI detection templates and OCR keywords
@@ -161,12 +169,18 @@ Usage:
 - Backend API: `/analytics/metrics` and `/analytics/session`
 - UI: metrics panel in the dev UI (auto-refresh)
 
-### v1.0.0 — Beta release
+### v1.0.0 — Beta release (Windows emulator)
 
-- [ ] End‑to‑end stability pass and error budgets
-- [ ] Documentation (setup, safety, UI, configs)
-- [ ] Installer scripts (backend + UI)
-- [ ] Release notes and versioned config templates
+- [x] End‑to‑end stability pass and error backoff thresholds
+- [x] Documentation (Windows setup, safety, UI controls, configs)
+- [x] Windows setup script (`scripts/windows_setup.ps1`)
+- [x] Release notes and Windows-focused quickstart
+
+Notes:
+
+- v1.0.0 is a beta. Expect to run primarily on Windows emulator (Google Play Games Beta) and report issues.
+- New safety rules: block external links/programs; block selling/removing heroes or equipment.
+- Stuck recovery: when the agent stalls, it re-evaluates OCR and performs lightweight web search to enrich memory and propose next steps.
 
 ### Stretch goals (post‑1.0)
 
@@ -295,7 +309,7 @@ Design notes:
 - Planning/learning: metrics-weighted heuristic policy initially; optional RL with Stable-Baselines3 (PPO) later
 - Parallelism/orchestration: Python asyncio, Ray (optional), task queue via Redis/Celery (optional)
 - Multi‑LLM/small models: OpenAI/Anthropic/Gemini APIs; local models via Ollama/llama.cpp; simple router to pick cheapest model that meets quality SLA
-- Emulator & I/O: Android Platform Tools (ADB) for capture and input; macOS screen APIs as fallback
+- Emulator & I/O: Android Platform Tools (ADB) for capture and input; Windows/macOS screen APIs as fallback
 - UI: TypeScript + React (Vite or Next.js), Tailwind CSS, WebSocket for live telemetry; state via Zustand/Redux
 - Tooling: Poetry or uv/pip-tools for Python deps; pnpm/npm/yarn for UI; pre-commit, ruff/black, mypy
 - Caching/coordination: Redis for cache/pubsub; structured logs to JSON files or OpenTelemetry
@@ -380,6 +394,15 @@ Prerequisites:
 - Node.js 20+
 - Tesseract OCR installed and available on PATH
 - Android Platform Tools (ADB) and a configured emulator
+  - On Windows, Google Play Games Beta is supported via window capture if ADB is not available
+
+Windows quickstart:
+
+- PowerShell: `./scripts/windows_setup.ps1`
+- Configure `.env` as needed (see Capture/Input and Window sections)
+- Run backend: `uvicorn app.main:app --reload`
+- Run UI: `cd ui && pnpm install && pnpm dev`
+- Use the UI Start/Pause/Stop buttons to control the agent
 
 Backend (FastAPI):
 
@@ -399,6 +422,20 @@ Emulator:
 1. Install and launch your emulator; enable ADB.
 2. Calibrate capture and input (resolution, DPI, window title); store settings in config.
 3. Set concurrency knobs: frames per second, OCR batch size, and max parallel agents.
+
+### Windows window capture (Google Play Games Beta)
+
+- Set environment variables in `.env` if needed:
+  - `CAPTURE_BACKEND=auto` (default) will try ADB first, then window capture
+  - `CAPTURE_BACKEND=window` forces window capture
+  - `WINDOW_TITLE_HINT=Google Play Games|Epic Seven|Epic 7` can be a regex or simple text to match the emulator window title
+  - `WINDOW_ENFORCE_TOPMOST=true` keeps the window on top during capture
+  - `WINDOW_LEFT=100`, `WINDOW_TOP=100`, `WINDOW_CLIENT_WIDTH=1280`, `WINDOW_CLIENT_HEIGHT=720` set the fixed position and client-area size
+- Ensure the emulator window is visible (not minimized) and on any monitor.
+- Usage examples:
+  - Capture one frame: `python -m app.cli capture --output-dir captures`
+  - Capture loop: `python -m app.cli capture-loop --fps 1 --ocr --count 5`
+  - To force window management before capture add `--ensure-window`
 
 Safety:
 

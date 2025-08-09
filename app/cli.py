@@ -10,12 +10,23 @@ from app.device.detect import (
     get_display_info,
 )
 from app.logging_config import configure_logging
-from app.services.capture.adb_capture import capture_frame
+from app.services.capture import capture_frame
 from app.services.ocr.tesseract_adapter import run_ocr
+from app.services.capture.window_manage import find_window_handle, set_topmost, move_resize
+from app.config import settings
 
 
 def cmd_capture(args: argparse.Namespace) -> int:
     configure_logging()
+    if args.ensure_window:
+        try:
+            hwnd = find_window_handle(settings.window_title_hint)
+            set_topmost(hwnd, True)
+            # Position and size: top-left at (100, 100), client area 1280x720 by default
+            move_resize(hwnd, left=100, top=100, width=1280, height=720, client_area=True)
+        except Exception:
+            # best-effort: continue
+            pass
     image = capture_frame()
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -37,11 +48,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="auto-gaming", description="Utility CLI for auto-gaming")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_cap = sub.add_parser("capture", help="Capture one frame via ADB and run OCR")
+    p_cap = sub.add_parser("capture", help="Capture one frame and run OCR")
     p_cap.add_argument(
         "--output-dir",
         default="captures",
         help="Directory to save the frame and OCR result",
+    )
+    p_cap.add_argument(
+        "--ensure-window",
+        action="store_true",
+        help="Ensure emulator window is foreground, topmost and resized before capture",
     )
     p_cap.set_defaults(func=cmd_capture)
 
@@ -68,6 +84,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run OCR and write a JSON per frame",
     )
+    p_loop.add_argument(
+        "--ensure-window",
+        action="store_true",
+        help="Ensure emulator window is foreground, topmost and resized before each capture",
+    )
     p_loop.set_defaults(func=cmd_capture_loop)
 
     p_doc = sub.add_parser("doctor", help="Check device display and suggest fixes for Epic7")
@@ -93,6 +114,13 @@ def cmd_capture_loop(args: argparse.Namespace) -> int:
     try:
         while True:
             ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            if args.ensure_window:
+                try:
+                    hwnd = find_window_handle(settings.window_title_hint)
+                    set_topmost(hwnd, True)
+                    move_resize(hwnd, left=100, top=100, width=1280, height=720, client_area=True)
+                except Exception:
+                    pass
             image = capture_frame()
             img_path = out_dir / f"frame_{ts}.png"
             image.save(img_path)

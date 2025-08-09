@@ -7,6 +7,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/telemetry": "http://localhost:8000",
+      "/analytics": "http://localhost:8000",
     },
   },
 });

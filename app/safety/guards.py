@@ -29,6 +29,7 @@ def load_purchase_keywords() -> set[str]:
 class SafetyReport:
     purchase_ui_detected: bool
     large_screen_change: bool
+    external_nav_detected: bool
 
 
 def detect_purchase_ui(image: Image.Image) -> bool:
@@ -41,6 +42,45 @@ def detect_purchase_text(text: str) -> bool:
     keywords = load_purchase_keywords()
     t = text.lower()
     return any(kw in t for kw in keywords)
+
+
+EXTERNAL_NAVIGATION_TERMS: set[str] = {
+    "external link",
+    "open browser",
+    "open in browser",
+    "visit website",
+    "watch ad",
+    "advertisement",
+    "youtube",
+    "facebook",
+    "twitter",
+    "x.com",
+    "instagram",
+    "discord",
+}
+
+
+def detect_external_navigation_text(text: str) -> bool:
+    t = text.lower()
+    return any(term in t for term in EXTERNAL_NAVIGATION_TERMS)
+
+
+ITEM_CHANGE_TERMS: set[str] = {
+    # conservative blocklist to avoid selling/removing heroes/equipment
+    "sell",
+    "discard",
+    "dismantle",
+    "enhance using",
+    "remove equipment",
+    "unequip",
+    "dismiss hero",
+    "retire hero",
+}
+
+
+def detect_item_change_text(text: str) -> bool:
+    t = text.lower()
+    return any(term in t for term in ITEM_CHANGE_TERMS)
 
 
 def screen_change(prev: Image.Image, cur: Image.Image, diff_threshold: float = 0.10) -> bool:

@@ -7,6 +7,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.memory.store import MemoryStore
 from app.telemetry.bus import Guidance, bus
+from app.agents.runner import runner
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -18,7 +19,8 @@ async def ping() -> dict[str, str]:
 
 @router.get("/status")
 async def status() -> dict[str, Any]:
-    return bus.get_status()
+    data = bus.get_status()
+    return {"agent_state": runner.get_state(), **data}
 
 
 @router.get("/decisions")
@@ -30,6 +32,24 @@ async def decisions() -> list[dict[str, Any]]:
 async def guidance(payload: Guidance) -> dict[str, str]:
     await bus.set_guidance(payload)
     return {"ok": "true"}
+
+
+@router.post("/control/start")
+async def control_start() -> dict[str, str]:
+    await runner.start()
+    return {"state": runner.get_state()}
+
+
+@router.post("/control/pause")
+async def control_pause() -> dict[str, str]:
+    await runner.pause()
+    return {"state": runner.get_state()}
+
+
+@router.post("/control/stop")
+async def control_stop() -> dict[str, str]:
+    await runner.stop()
+    return {"state": runner.get_state()}
 
 
 @router.get("/memory/search")
