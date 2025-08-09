@@ -77,6 +77,7 @@ Usage:
 - [x] Retrieval API: given state, return top‑k relevant memories
 
 Usage:
+
 - Ingest URLs and store summaries:
   - `from app.services.search.web_ingest import fetch_urls, summarize`
   - `from app.memory.store import MemoryStore, Fact`
@@ -88,11 +89,16 @@ Usage:
 
 ### v0.4.0 — Planner v1 and action executor
 
-- [ ] Heuristic policy using metrics + memory signals
-- [ ] Action schema (tap, swipe, wait, back)
-- [ ] Input executor (ADB) with retries and backoff
-- [ ] Safety checks before/after action (screen diff, guard rails)
-- [ ] Rollback/escape sequence (close dialogs, return home)
+- [x] Heuristic policy using metrics + memory signals
+- [x] Action schema (tap, swipe, wait, back)
+- [x] Input executor (ADB) with retries and backoff
+- [x] Safety checks before/after action (screen diff, guard rails)
+- [x] Rollback/escape sequence (close dialogs, return home)
+
+Usage:
+- Propose an action: `from app.policy.heuristic import propose_action`
+- Execute: `from app.actions.executor import execute, escape_sequence`
+- Safety checks: `from app.safety.guards import detect_purchase_ui, screen_change`
 
 ### v0.5.0 — UI Alpha
 
