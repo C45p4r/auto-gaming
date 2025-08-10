@@ -84,6 +84,11 @@ function App() {
         <div>Task: {status.task ?? "-"}</div>
         <div>Confidence: {status.confidence ?? "-"}</div>
         <div>Next: {status.next ?? "-"}</div>
+        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) })}>Back</button>
+          <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) })}>Wait 1s</button>
+          <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) })}>Swipe gentle</button>
+        </div>
       </section>
       <section>
         <h2>Performance</h2>

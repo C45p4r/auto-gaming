@@ -19,6 +19,8 @@ from pathlib import Path
 import base64
 from datetime import datetime
 from app.diagnostics.doctor import run_self_check
+from app.actions.executor import execute
+from app.actions.types import BackAction, WaitAction, SwipeAction
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -123,6 +125,33 @@ async def memory_recent(limit: int = 20) -> list[dict[str, Any]]:
 async def doctor_self_check() -> dict[str, Any]:
     res = run_self_check()
     return {"ok": res.ok, "issues": res.issues, "details": res.details}
+
+
+@router.post("/control/act")
+async def control_act(payload: dict[str, Any] = Body(...)) -> dict[str, str]:
+    """Operator one-click actions: back, wait(1s), swipe_gentle.
+
+    Example payloads:
+      {"type": "back"}
+      {"type": "wait", "seconds": 1.0}
+      {"type": "swipe_gentle"}
+    """
+    t = str(payload.get("type", "")).lower()
+    if t == "back":
+        execute(BackAction())
+    elif t == "wait":
+        seconds = float(payload.get("seconds", 1.0))
+        execute(WaitAction(seconds=seconds))
+    elif t == "swipe_gentle":
+        base_w = max(1, int(settings.input_base_width))
+        base_h = max(1, int(settings.input_base_height))
+        x = int(base_w * 0.5)
+        y1 = int(base_h * 0.70)
+        y2 = int(base_h * 0.35)
+        execute(SwipeAction(x1=x, y1=y1, x2=x, y2=y2, duration_ms=300))
+    else:
+        return {"status": "ignored"}
+    return {"status": "ok"}
 
 
 @router.get("/window/rect")

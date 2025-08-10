@@ -296,6 +296,7 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
 #### v2.0.1 — v2.1.0 UI/UX improvements (10 updates)
 
 - v2.0.1
+
   - [ ] Collapsible panels and layout presets (compact, detailed)
   - [ ] Decision table filters (agent, type, latency range, errors only)
   - [ ] Sticky mini heads-up strip (FPS, actions/s, blocks, stuck, model)
@@ -303,11 +304,13 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Memory thumbnails with inline expand and copy-to-clipboard OCR
 
 - v2.0.2
+
   - [ ] Session replay scrubber (time slider) with frame previews
   - [ ] Export session trace (JSONL) and frames; Import for replay
   - [ ] Metrics compare view (last 5 sessions) with deltas
 
 - v2.0.3
+
   - [ ] Guidance editor (prioritize/avoid templates, presets)
   - [ ] Doctor panel enhancements (quick fixes, open config, re-run with logs)
 
