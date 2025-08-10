@@ -9,6 +9,12 @@ from typing import Optional
 
 user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
+# Enable DPI awareness so client rect and screen coords are in physical pixels
+try:
+    user32.SetProcessDPIAware()
+except Exception:
+    pass
+
 
 EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
 

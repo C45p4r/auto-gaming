@@ -11,6 +11,7 @@ class Settings(BaseSettings):
 
     # OCR
     ocr_language: str = Field(default="eng", alias="OCR_LANGUAGE")
+    tesseract_cmd: str | None = Field(default=None, alias="TESSERACT_CMD")
 
     # Emulator / ADB
     adb_path: str = Field(default="adb", alias="ADB_PATH")
@@ -23,11 +24,14 @@ class Settings(BaseSettings):
     window_title_hint: str | None = Field(
         default=r"Google Play Games|Epic Seven|Epic 7", alias="WINDOW_TITLE_HINT"
     )
+    window_force_foreground: bool = Field(default=True, alias="WINDOW_FORCE_FOREGROUND")
     window_enforce_topmost: bool = Field(default=True, alias="WINDOW_ENFORCE_TOPMOST")
     window_left: int = Field(default=100, alias="WINDOW_LEFT")
     window_top: int = Field(default=100, alias="WINDOW_TOP")
     window_client_width: int = Field(default=1280, alias="WINDOW_CLIENT_WIDTH")
     window_client_height: int = Field(default=720, alias="WINDOW_CLIENT_HEIGHT")
+    # Exclude a bottom margin from tap targets to avoid taskbar if overlapping (pixels)
+    input_exclude_bottom_px: int = Field(default=0, alias="INPUT_EXCLUDE_BOTTOM_PX")
 
     # Input
     input_backend: str | None = Field(

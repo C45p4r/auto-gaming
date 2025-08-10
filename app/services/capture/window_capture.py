@@ -15,6 +15,12 @@ class WindowCaptureError(RuntimeError):
 
 user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
+# Ensure DPI awareness for accurate client-to-screen mapping on high-DPI displays
+try:
+    user32.SetProcessDPIAware()
+except Exception:
+    pass
+
 
 EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
 
@@ -97,8 +103,10 @@ def find_window_rect(title_hint: Optional[str]) -> WindowRect:
 
     user32.EnumWindows(EnumWindowsProc(callback), 0)
     if result_rect is None:
+        hint = title_hint or "(none)"
         raise WindowCaptureError(
-            f"No matching window found for title hint: {title_hint!r}. Ensure Google Play Games Beta is running and visible."
+            "Emulator window not found. Ensure the emulator is running and visible (not minimized). "
+            f"WINDOW_TITLE_HINT={hint}."
         )
     return result_rect
 

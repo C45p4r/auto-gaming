@@ -11,6 +11,7 @@ from app.device.detect import (
 )
 from app.logging_config import configure_logging
 from app.services.capture import capture_frame
+from app.services.capture.window_capture import WindowCaptureError
 from app.services.ocr.tesseract_adapter import run_ocr
 from app.services.capture.window_manage import find_window_handle, set_topmost, move_resize
 from app.config import settings
@@ -22,12 +23,23 @@ def cmd_capture(args: argparse.Namespace) -> int:
         try:
             hwnd = find_window_handle(settings.window_title_hint)
             set_topmost(hwnd, True)
-            # Position and size: top-left at (100, 100), client area 1280x720 by default
-            move_resize(hwnd, left=100, top=100, width=1280, height=720, client_area=True)
+            # Position and size from settings to avoid letterboxing/black gaps
+            move_resize(
+                hwnd,
+                left=int(settings.window_left),
+                top=int(settings.window_top),
+                width=int(settings.window_client_width),
+                height=int(settings.window_client_height),
+                client_area=True,
+            )
         except Exception:
             # best-effort: continue
             pass
-    image = capture_frame()
+    try:
+        image = capture_frame()
+    except WindowCaptureError as e:
+        # Emit a clear error and non-zero exit
+        raise SystemExit(f"Capture failed: {e}")
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -118,7 +130,14 @@ def cmd_capture_loop(args: argparse.Namespace) -> int:
                 try:
                     hwnd = find_window_handle(settings.window_title_hint)
                     set_topmost(hwnd, True)
-                    move_resize(hwnd, left=100, top=100, width=1280, height=720, client_area=True)
+                    move_resize(
+                        hwnd,
+                        left=int(settings.window_left),
+                        top=int(settings.window_top),
+                        width=int(settings.window_client_width),
+                        height=int(settings.window_client_height),
+                        client_area=True,
+                    )
                 except Exception:
                     pass
             image = capture_frame()

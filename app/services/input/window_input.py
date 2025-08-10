@@ -7,12 +7,19 @@ from typing import Tuple
 
 user32 = ctypes.windll.user32  # type: ignore[attr-defined]
 
+# Make this process DPI aware so coordinates match real pixels on high-DPI displays
+try:  # best-effort, available on Vista+
+    user32.SetProcessDPIAware()
+except Exception:
+    pass
+
 
 # Constants from WinUser.h
 MOUSEEVENTF_MOVE = 0x0001
 MOUSEEVENTF_LEFTDOWN = 0x0002
 MOUSEEVENTF_LEFTUP = 0x0004
 MOUSEEVENTF_ABSOLUTE = 0x8000
+MOUSEEVENTF_VIRTUALDESK = 0x4000
 
 INPUT_MOUSE = 0
 INPUT_KEYBOARD = 1
@@ -51,11 +58,20 @@ class INPUT(ctypes.Structure):
 
 
 def _normalize_to_absolute(x: int, y: int) -> Tuple[int, int]:
-    screen_w = user32.GetSystemMetrics(0)
-    screen_h = user32.GetSystemMetrics(1)
-    # Map to [0, 65535]
-    nx = int(x * 65535 / max(1, screen_w - 1))
-    ny = int(y * 65535 / max(1, screen_h - 1))
+    # Use virtual screen metrics to support multi-monitor setups
+    SM_XVIRTUALSCREEN = 76
+    SM_YVIRTUALSCREEN = 77
+    SM_CXVIRTUALSCREEN = 78
+    SM_CYVIRTUALSCREEN = 79
+
+    vs_left = user32.GetSystemMetrics(SM_XVIRTUALSCREEN)
+    vs_top = user32.GetSystemMetrics(SM_YVIRTUALSCREEN)
+    vs_width = user32.GetSystemMetrics(SM_CXVIRTUALSCREEN)
+    vs_height = user32.GetSystemMetrics(SM_CYVIRTUALSCREEN)
+
+    # Map to [0, 65535] across the virtual desktop
+    nx = int((x - vs_left) * 65535 / max(1, vs_width - 1))
+    ny = int((y - vs_top) * 65535 / max(1, vs_height - 1))
     return nx, ny
 
 
@@ -68,11 +84,11 @@ def _send_mouse_event(nx: int, ny: int, flags: int) -> None:
 
 def click_absolute(x: int, y: int) -> None:
     nx, ny = _normalize_to_absolute(x, y)
-    _send_mouse_event(nx, ny, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE)
+    _send_mouse_event(nx, ny, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK)
     time.sleep(0.01)
-    _send_mouse_event(nx, ny, MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE)
+    _send_mouse_event(nx, ny, MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK)
     time.sleep(0.01)
-    _send_mouse_event(nx, ny, MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE)
+    _send_mouse_event(nx, ny, MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK)
 
 
 def swipe_absolute(x1: int, y1: int, x2: int, y2: int, duration_ms: int = 200) -> None:
@@ -82,14 +98,14 @@ def swipe_absolute(x1: int, y1: int, x2: int, y2: int, duration_ms: int = 200) -
     dx = (nx2 - nx1) / float(steps)
     dy = (ny2 - ny1) / float(steps)
     # Move to start and hold down
-    _send_mouse_event(nx1, ny1, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE)
-    _send_mouse_event(nx1, ny1, MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE)
+    _send_mouse_event(nx1, ny1, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK)
+    _send_mouse_event(nx1, ny1, MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK)
     for i in range(1, steps + 1):
         cx = int(nx1 + dx * i)
         cy = int(ny1 + dy * i)
-        _send_mouse_event(cx, cy, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE)
+        _send_mouse_event(cx, cy, MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK)
         time.sleep(max(0.0, duration_ms / 1000.0 / steps))
-    _send_mouse_event(nx2, ny2, MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE)
+    _send_mouse_event(nx2, ny2, MOUSEEVENTF_LEFTUP | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK)
 
 
 def send_escape() -> None:

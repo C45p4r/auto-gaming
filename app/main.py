@@ -1,12 +1,15 @@
-from fastapi import FastAPI
+import logging
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.analytics import router as analytics_router
 from app.routes.telemetry import router as telemetry_router
+from app.logging_config import configure_logging
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="auto-gaming", version="0.1.0")
+    configure_logging()
+    app = FastAPI(title="auto-gaming", version="1.0.0-beta")
 
     app.add_middleware(
         CORSMiddleware,
@@ -15,6 +18,13 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def access_log(request: Request, call_next):
+        # Temporarily disable custom access logging to avoid formatter conflicts.
+        # We still have JSON root logs and runner logs in logs/app.log.
+        response = await call_next(request)
+        return response
 
     @app.get("/health")
     async def health() -> dict[str, str]:

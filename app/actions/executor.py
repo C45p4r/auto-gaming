@@ -62,16 +62,38 @@ def execute(action: Action) -> None:
         scale_x = rect.width / float(base_w)
         scale_y = rect.height / float(base_h)
 
+        def _clamp_to_rect(px: int, py: int) -> tuple[int, int]:
+            # Keep clicks safely inside client area to avoid taskbar or borders
+            margin_x = max(6, int(rect.width * 0.04))
+            margin_y = max(6, int(rect.height * 0.06))
+            # Allow user-configured extra exclusion at the bottom
+            try:
+                from app.config import settings as cfg
+
+                margin_y = max(margin_y, int(cfg.input_exclude_bottom_px))
+            except Exception:
+                pass
+            clamped_x = max(rect.left + margin_x, min(rect.right - margin_x, px))
+            clamped_y = max(rect.top + margin_y, min(rect.bottom - margin_y, py))
+            return clamped_x, clamped_y
+
         if isinstance(action, TapAction):
+            # Ensure the target window is foregrounded before sending input
+            # Do not force foreground on every tap to avoid stealing focus from the emulator
+
             x = int(rect.left + action.x * scale_x)
             y = int(rect.top + action.y * scale_y)
+            x, y = _clamp_to_rect(x, y)
             # Prefer direct OS-level click for Windows emulator testing
             click_absolute(x, y)
         elif isinstance(action, SwipeAction):
+            # Avoid foregrounding during swipe as well
             x1 = int(rect.left + action.x1 * scale_x)
             y1 = int(rect.top + action.y1 * scale_y)
             x2 = int(rect.left + action.x2 * scale_x)
             y2 = int(rect.top + action.y2 * scale_y)
+            x1, y1 = _clamp_to_rect(x1, y1)
+            x2, y2 = _clamp_to_rect(x2, y2)
             swipe_absolute(x1, y1, x2, y2, action.duration_ms)
         elif isinstance(action, WaitAction):
             time.sleep(action.seconds)

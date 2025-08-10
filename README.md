@@ -11,6 +11,25 @@ Status: Beta v1.0.0 (Windows Emulator). Core features implemented; requires furt
 - Provide a modern UI to surface the agent's current status, decision logic, and memories, with optional light-touch manual guidance.
 - Enforce strict safety: no real-world payments or monetization actions, ever.
 
+## Terminology and naming (for precise targeting)
+
+- Program: "auto-gaming" (this backend service and agent runtime)
+- UI: "auto-gaming UI" (React/Vite frontend in `ui/`)
+- Game: "Epic Seven" (aka "Epic 7")
+- Emulator: "Google Play Games Beta" on Windows (target environment for testing)
+- Capture backend names: `adb` (device screencap), `window` (Windows client-area capture)
+- Input backend names: `adb` (shell input), `window` (Windows SendInput scaled to client area)
+- Window title hint (regex): `WINDOW_TITLE_HINT=Google Play Games|Epic Seven|Epic 7`
+- Window management: "topmost" and fixed client size/position (see `WINDOW_ENFORCE_TOPMOST`, geometry vars)
+- Agent runner: `AgentRunner` (lifecycle: running/paused/stopped)
+- Policy (heuristic): `policy-lite`
+- Policy (Hugging Face): `hf-policy` (enabled via `HF_MODEL_ID_POLICY`)
+- Judge (Hugging Face): `hf-judge` (enabled via `HF_MODEL_ID_JUDGE`)
+- Safety rules (names): `no-external-navigation`, `no-item-change` (sell/remove/unequip)
+- Stuck recovery: OCR-driven web search + memory enrichment
+- Control endpoints: `/telemetry/control/{start|pause|stop}`; WebSocket: `/telemetry/ws`
+- Key env variables: `CAPTURE_BACKEND`, `INPUT_BACKEND`, `WINDOW_TITLE_HINT`, `HF_MODEL_ID_POLICY`, `HF_MODEL_ID_JUDGE`, `HUGGINGFACE_HUB_TOKEN`
+
 ## Scope and target game
 
 - Focus: 2D mobile titles, with Epic7 as the initial target for MVP validation.
@@ -385,6 +404,36 @@ Runtime integration (enable HF agents):
 - Policy agent: set `HF_MODEL_ID_POLICY` in `.env`. The system auto-loads a local `transformers` pipeline or uses `huggingface_hub.InferenceClient` when `HF_INFERENCE_ENDPOINT_URL` is set. Falls back to heuristic on errors.
 - Judge agent: set `HF_MODEL_ID_JUDGE` to enable candidate selection via HF. Falls back to score-based vote on errors.
 - Optionally set `HUGGINGFACE_HUB_TOKEN` for gated models/endpoints.
+
+Setup (manual steps):
+
+1. Choose mode:
+   - Local policy on CPU: recommended to start with a small model (e.g., `TinyLlama/TinyLlama-1.1B-Chat-v1.0`). Large models (e.g., 7B) are slow on CPU.
+   - Hosted policy/judge: use `HF_INFERENCE_ENDPOINT_URL` or Serverless Inference via `huggingface_hub.InferenceClient`.
+2. Install PyTorch CPU if using local `transformers`:
+   - Windows (CPU):
+     - `pip install --index-url https://download.pytorch.org/whl/cpu torch`
+   - Verify: `python -c "import torch; print(torch.__version__)"`
+3. Create a Hugging Face account and token (if needed):
+   - Generate a PAT at `https://huggingface.co/settings/tokens` and set `HUGGINGFACE_HUB_TOKEN` in `.env`.
+   - If the model is gated, visit its model page and click “Agree/Accept” to enable downloads.
+4. Configure `.env`:
+   - `HF_MODEL_ID_POLICY=TinyLlama/TinyLlama-1.1B-Chat-v1.0` (example small CPU model)
+   - Optional judge: `HF_MODEL_ID_JUDGE=TinyLlama/TinyLlama-1.1B-Chat-v1.0`
+   - Optional hosted: `HF_INFERENCE_ENDPOINT_URL=https://...` (pointing to your TGI endpoint)
+   - Optional cache: set `HF_HOME` to move the HF cache directory (e.g., to a larger drive)
+5. Restart backend:
+   - `uvicorn app.main:app --reload`
+6. Verify it’s active:
+   - Start the agent from the UI. In the Status panel, the Task will mention `hf-policy` when the HF policy is used; otherwise it shows `policy-lite` (heuristic).
+   - Logs will also indicate model loading the first time.
+
+Troubleshooting:
+
+- Falls back to heuristic: missing/invalid `HF_MODEL_ID_POLICY`, model fetch errors, or runtime generation errors. Check logs and `.env`.
+- Import errors for `torch`: ensure PyTorch CPU is installed (step 2) or switch to hosted mode.
+- 403/401 on model download: accept the model’s license on its page and/or set a valid `HUGGINGFACE_HUB_TOKEN`.
+- Slow generations on CPU: switch to a smaller model or hosted endpoint via `HF_INFERENCE_ENDPOINT_URL`.
 
 Notes:
 

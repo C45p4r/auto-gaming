@@ -40,8 +40,21 @@ def _capture_via_adb(serial: Optional[str]) -> Image.Image:
 def _capture_via_window() -> Image.Image:
     # Import locally to avoid Windows-only imports at module import time
     from app.services.capture.window_capture import capture_window
+    from app.services.capture.window_manage import (
+        find_window_handle,
+        get_foreground_window,
+        set_foreground_window,
+    )
 
     title_hint = settings.window_title_hint
+    # Best effort: bring target window to foreground if configured, without spawning external processes
+    try:
+        if settings.window_force_foreground and title_hint:
+            hwnd = find_window_handle(title_hint)
+            if hwnd and hwnd != get_foreground_window():
+                set_foreground_window(hwnd)
+    except Exception:
+        pass
     return capture_window(title_hint)
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from typing import Literal, Optional
+import logging
 import contextlib
 
 from PIL import Image
@@ -32,6 +33,11 @@ class AgentRunner:
         self._task: Optional[asyncio.Task[None]] = None
         self._pause_event = asyncio.Event()
         self._pause_event.set()  # not paused
+        self._last_enforce_ts: float = 0.0
+        self._last_resize_ts: float = 0.0
+        self._did_initial_enforce: bool = False
+        self._last_ocr_fp: str | None = None
+        self._unchanged_count: int = 0
 
     def get_state(self) -> RunState:
         return self._state
@@ -69,23 +75,44 @@ class AgentRunner:
         interval = 1.0 / float(settings.capture_fps)
         prev: Optional[Image.Image] = None
         consec_errors = 0
+        logger = logging.getLogger("runner")
         while True:
             # Respect pause
             await self._pause_event.wait()
 
-            # Optional window enforcement for stable capture
+            # Optional window enforcement for stable capture (only once, then rarely)
             if settings.window_enforce_topmost:
+                now = time.perf_counter()
                 try:
                     hwnd = find_window_handle(settings.window_title_hint)
-                    set_topmost(hwnd, True)
-                    move_resize(
-                        hwnd,
-                        left=int(settings.window_left),
-                        top=int(settings.window_top),
-                        width=int(settings.window_client_width),
-                        height=int(settings.window_client_height),
-                        client_area=True,
-                    )
+                    if not self._did_initial_enforce:
+                        set_topmost(hwnd, True)
+                        move_resize(
+                            hwnd,
+                            left=int(settings.window_left),
+                            top=int(settings.window_top),
+                            width=int(settings.window_client_width),
+                            height=int(settings.window_client_height),
+                            client_area=True,
+                        )
+                        self._did_initial_enforce = True
+                        self._last_enforce_ts = now
+                        self._last_resize_ts = now
+                    else:
+                        # Re-apply topmost every 60s, resize every 300s to avoid flicker
+                        if (now - self._last_enforce_ts) > 60.0:
+                            set_topmost(hwnd, True)
+                            self._last_enforce_ts = now
+                        if (now - self._last_resize_ts) > 300.0:
+                            move_resize(
+                                hwnd,
+                                left=int(settings.window_left),
+                                top=int(settings.window_top),
+                                width=int(settings.window_client_width),
+                                height=int(settings.window_client_height),
+                                client_area=True,
+                            )
+                            self._last_resize_ts = now
                 except Exception:
                     # best-effort: continue
                     pass
@@ -96,6 +123,13 @@ class AgentRunner:
             try:
                 image = capture_frame()
                 state = encode_state(image)
+                # Track OCR stability to avoid repeating same actions
+                fp = (state.ocr_text or "").strip().lower()[:200]
+                if self._last_ocr_fp is not None and fp == self._last_ocr_fp:
+                    self._unchanged_count += 1
+                else:
+                    self._unchanged_count = 0
+                self._last_ocr_fp = fp
                 # External navigation guard: block actions if UI suggests leaving the game
                 if detect_external_navigation_text(state.ocr_text):
                     await bus.publish_status(
@@ -125,8 +159,8 @@ class AgentRunner:
                     consec_errors = 0
                     continue
 
-                # If stuck recently, try minimal web search to enrich memory
-                if consec_errors >= 2:
+                # If errors or UI unchanged for several frames, try minimal web search to enrich memory
+                if consec_errors >= 2 or self._unchanged_count >= 3:
                     try:
                         hints = [line for line in state.ocr_text.splitlines() if line.strip()][:3]
                         # Simple Google queries; relies on fetch_urls to rate-limit politely
@@ -151,12 +185,21 @@ class AgentRunner:
                 if not settings.dry_run:
                     execute(action)
                 consec_errors = 0
-            except Exception:
+            except Exception as exc:
+                logger.exception("runner_loop_error")
                 consec_errors += 1
                 backoff = float(settings.error_backoff_s) * min(4.0, 1.0 + consec_errors / 2.0)
+                # surface the error briefly to UI
+                try:
+                    await bus.publish_status(task="error", confidence=None, next_step=str(exc)[:200])
+                except Exception:
+                    pass
                 await asyncio.sleep(backoff)
                 if consec_errors >= int(settings.max_consec_errors):
-                    await bus.publish_status(task="error_quit", confidence=None, next_step=None)
+                    try:
+                        await bus.publish_status(task="error_quit", confidence=None, next_step=str(exc)[:200])
+                    except Exception:
+                        pass
                     break
             prev = image
 

@@ -5,7 +5,8 @@ import { createRoot } from "react-dom/client";
 type TelemetryMsg = { type: "status"; data: { task: string | null; confidence: number | null; next: string | null } } | { type: "decision"; data: any } | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } };
 
 function App() {
-  const [status, setStatus] = useState<{ task: string | null; confidence: number | null; next: string | null }>({ task: null, confidence: null, next: null });
+  const [status, setStatus] = useState<{ agent_state?: string | null; task: string | null; confidence: number | null; next: string | null }>({ agent_state: null, task: null, confidence: null, next: null });
+  const [log, setLog] = useState<string[]>([]);
   const [decisions, setDecisions] = useState<any[]>([]);
   const [guidance, setGuidance] = useState<{ prioritize: string[]; avoid: string[] }>({ prioritize: [], avoid: [] });
   const wsRef = useRef<WebSocket | null>(null);
@@ -18,6 +19,7 @@ function App() {
       if (msg.type === "status") setStatus(msg.data);
       if (msg.type === "decision") setDecisions((d) => [msg.data, ...d].slice(0, 200));
       if (msg.type === "guidance") setGuidance(msg.data);
+      setLog((l) => [new Date().toLocaleTimeString() + " " + (typeof msg === "string" ? msg : JSON.stringify(msg)), ...l].slice(0, 200));
     };
     wsRef.current = ws;
     return () => ws.close();
@@ -47,10 +49,18 @@ function App() {
       </section>
       <section>
         <h2>Status</h2>
-        <div>Agent: {(status as any).agent_state ?? "-"}</div>
+        <div>Agent: {status.agent_state ?? "-"}</div>
         <div>Task: {status.task ?? "-"}</div>
         <div>Confidence: {status.confidence ?? "-"}</div>
         <div>Next: {status.next ?? "-"}</div>
+      </section>
+      <section>
+        <h2>Client Logs</h2>
+        <div style={{ maxHeight: 180, overflow: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12 }}>
+          {log.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </div>
       </section>
       <section>
         <h2>Guidance</h2>
