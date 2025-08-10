@@ -26,6 +26,7 @@ from app.memory.store import MemoryStore, Fact
 from app.metrics.registry import compute_metrics
 from app.analytics.metrics import store as metrics_store
 from app.analytics.session import session, Step
+from app.reliability.flake import FlakeTracker
 
 
 RunState = Literal["idle", "running", "paused", "stopped"]
@@ -54,6 +55,7 @@ class AgentRunner:
         self._fps: float = 0.0
         self._actions_at_last_fps: int = 0
         self._window_ok: bool = False
+        self._flake = FlakeTracker()
 
     def get_state(self) -> RunState:
         return self._state
@@ -319,6 +321,11 @@ class AgentRunner:
             except Exception as exc:
                 logger.exception("runner_loop_error")
                 consec_errors += 1
+                # Track reliability flake events
+                try:
+                    self._flake.record_error(self._last_ocr_fp)
+                except Exception:
+                    pass
                 backoff = float(settings.error_backoff_s) * min(4.0, 1.0 + consec_errors / 2.0)
                 # surface the error briefly to UI
                 try:
@@ -335,7 +342,9 @@ class AgentRunner:
             prev = image
 
             elapsed = time.perf_counter() - start_time
-            await asyncio.sleep(max(0.0, interval - elapsed))
+            # If in quarantine mode due to flakiness, slow down slightly
+            slow = 0.3 if getattr(self._flake, "in_quarantine", False) else 0.0
+            await asyncio.sleep(max(0.0, interval - elapsed + slow))
 
 
 runner = AgentRunner()

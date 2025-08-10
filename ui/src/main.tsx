@@ -265,14 +265,29 @@ function SessionReplay() {
           </tr>
         </thead>
         <tbody>
-          {rows.slice(-100).reverse().map((r, i) => (
-            <tr key={i}>
-              <td style={{ padding: 6 }}><code>{r.ts}</code></td>
-              <td style={{ padding: 6 }}>{r.action}</td>
-              <td style={{ padding: 6 }}>{r.reason}</td>
-              <td style={{ padding: 6 }}>{r.image_path ? <a href={r.image_path} target="_blank">view</a> : "-"}</td>
-            </tr>
-          ))}
+          {rows
+            .slice(-100)
+            .reverse()
+            .map((r, i) => (
+              <tr key={i}>
+                <td style={{ padding: 6 }}>
+                  <code>{r.ts}</code>
+                </td>
+                <td style={{ padding: 6 }}>{r.action}</td>
+                <td style={{ padding: 6 }}>{r.reason}</td>
+                <td style={{ padding: 6 }}>
+                  {r.image_path ? (
+                    <a
+                      href={r.image_path}
+                      target="_blank">
+                      view
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>
