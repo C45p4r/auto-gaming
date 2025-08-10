@@ -22,7 +22,11 @@ export function MetricsChart() {
       <h2>Metrics</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
         {keys.map((name) => (
-          <MiniChart key={name} name={name} points={series[name] ?? []} />
+          <MiniChart
+            key={name}
+            name={name}
+            points={series[name] ?? []}
+          />
         ))}
       </div>
     </div>
@@ -39,7 +43,11 @@ function MiniChart({ name, points }: { name: string; points: Point[] }) {
       </div>
       <div style={{ display: "flex", gap: 2, alignItems: "flex-end", minHeight: 60 }}>
         {points.slice(-80).map((p, i) => (
-          <div key={i} title={`${p.ts}: ${p.value}`} style={{ width: 3, height: Math.max(2, p.value * 10), background: "#4f46e5" }} />
+          <div
+            key={i}
+            title={`${p.ts}: ${p.value}`}
+            style={{ width: 3, height: Math.max(2, p.value * 10), background: "#4f46e5" }}
+          />
         ))}
       </div>
     </div>

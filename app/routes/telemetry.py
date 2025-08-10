@@ -3,11 +3,18 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Body
 
 from app.memory.store import MemoryStore
 from app.telemetry.bus import Guidance, bus
 from app.agents.runner import runner
+from app.services.capture.window_manage import (
+    find_window_handle,
+    get_client_rect,
+    move_resize,
+    set_topmost,
+)
+from app.config import settings
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -80,3 +87,23 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 pass
     except WebSocketDisconnect:
         await bus.unsubscribe(q)
+
+
+@router.get("/window/rect")
+async def window_rect() -> dict[str, int]:
+    """Return current emulator client-area rectangle in screen coordinates."""
+    hwnd = find_window_handle(settings.window_title_hint)
+    r = get_client_rect(hwnd)
+    return {"left": r.left, "top": r.top, "width": r.width, "height": r.height}
+
+
+@router.post("/window/set")
+async def window_set(
+    left: int = Body(...), top: int = Body(...), width: int = Body(...), height: int = Body(...)
+) -> dict[str, int]:
+    """Move/resize emulator to desired client-area rectangle."""
+    hwnd = find_window_handle(settings.window_title_hint)
+    set_topmost(hwnd, True)
+    move_resize(hwnd, left=left, top=top, width=width, height=height, client_area=True)
+    r = get_client_rect(hwnd)
+    return {"left": r.left, "top": r.top, "width": r.width, "height": r.height}

@@ -99,10 +99,22 @@ function App() {
             label="Blocks"
             value={status.blocks ?? 0}
           />
-          <Stat label="Stuck" value={status.stuck_events ?? 0} />
-          <Stat label="Window OK" value={status.window_ok ? "Yes" : "No"} />
-          <Stat label="Capture" value={status.capture_backend ?? "-"} />
-          <Stat label="Input" value={status.input_backend ?? "-"} />
+          <Stat
+            label="Stuck"
+            value={status.stuck_events ?? 0}
+          />
+          <Stat
+            label="Window OK"
+            value={status.window_ok ? "Yes" : "No"}
+          />
+          <Stat
+            label="Capture"
+            value={status.capture_backend ?? "-"}
+          />
+          <Stat
+            label="Input"
+            value={status.input_backend ?? "-"}
+          />
         </div>
         <div style={{ marginTop: 6, color: "#6b7280", fontSize: 12 }}>
           Model: {status.model_policy} {status.model_id_policy}
@@ -115,6 +127,10 @@ function App() {
             <div key={i}>{line}</div>
           ))}
         </div>
+      </section>
+      <section>
+        <h2>Window</h2>
+        <WindowControls />
       </section>
       <section>
         <h2>Guidance</h2>
@@ -162,6 +178,48 @@ function Stat(props: { label: string; value: string | number }) {
     <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
       <div style={{ color: "#6b7280", fontSize: 12 }}>{props.label}</div>
       <div style={{ fontSize: 18, fontWeight: 600 }}>{props.value}</div>
+    </div>
+  );
+}
+
+function WindowControls() {
+  const [rect, setRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  async function refresh() {
+    const j = await fetch("/telemetry/window/rect").then((r) => r.json());
+    setRect(j);
+  }
+  async function apply() {
+    if (!rect) return;
+    await fetch("/telemetry/window/set", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(rect),
+    });
+    await refresh();
+  }
+  useEffect(() => {
+    refresh();
+  }, []);
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <button onClick={refresh} style={{ padding: "6px 12px" }}>Refresh</button>
+      <label>
+        Left
+        <input type="number" value={rect?.left ?? 0} onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), left: Number(e.target.value) })} style={{ width: 90, marginLeft: 6 }} />
+      </label>
+      <label>
+        Top
+        <input type="number" value={rect?.top ?? 0} onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), top: Number(e.target.value) })} style={{ width: 90, marginLeft: 6 }} />
+      </label>
+      <label>
+        Width
+        <input type="number" value={rect?.width ?? 1280} onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), width: Number(e.target.value) })} style={{ width: 90, marginLeft: 6 }} />
+      </label>
+      <label>
+        Height
+        <input type="number" value={rect?.height ?? 720} onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), height: Number(e.target.value) })} style={{ width: 90, marginLeft: 6 }} />
+      </label>
+      <button onClick={apply} style={{ padding: "6px 12px" }}>Apply</button>
     </div>
   );
 }
