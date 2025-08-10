@@ -1,0 +1,97 @@
+Auto-Gaming — Notion Backup (Human-Readable)
+
+Status
+- Version: Beta v1.0.0 (Windows Emulator). Focus on Google Play Games Beta.
+- Next target: v2.0.0 fully functional on Windows. See Roadmap below.
+
+Terminology
+- Program: auto-gaming (backend agent + API)
+- UI: auto-gaming UI (React/Vite)
+- Game: Epic Seven (Epic 7)
+- Emulator: Google Play Games Beta (Windows)
+- Capture backends: adb | window
+- Input backends: adb | window
+- Safety rules: no external links/programs, no selling/removing heroes/equipment
+
+Quickstart (Windows)
+1) Install
+- Python 3.11+, Node.js 20+
+- Tesseract OCR (set TESSERACT_CMD) and ensure tessdata is found
+- pip install -r requirements.txt
+- cd ui && npm install && npm run dev (or use your existing setup)
+2) Configure .env
+- CAPTURE_BACKEND=window
+- INPUT_BACKEND=window
+- WINDOW_TITLE_HINT=Epic Seven|Google Play Games
+- WINDOW_ENFORCE_TOPMOST=true
+- WINDOW_LEFT=100, WINDOW_TOP=100, WINDOW_CLIENT_WIDTH=1280, WINDOW_CLIENT_HEIGHT=720
+- INPUT_BASE_WIDTH=1280, INPUT_BASE_HEIGHT=720
+- INPUT_EXCLUDE_BOTTOM_PX=40
+- TESSERACT_CMD=C:\\Program Files\\Tesseract-OCR\\tesseract.exe
+- OCR_LANGUAGE=eng
+3) Run
+- uvicorn app.main:app --host 127.0.0.1 --port 8000
+- Open UI dev server (Vite) or your deployed UI, connect to backend
+- Press Start to begin
+
+Controls in UI
+- Start / Pause / Stop agent
+- Performance panel: fps, actions, taps, swipes, backs, blocks, stuck, window_ok, capture/input backends, model info
+- Decisions table: who, action, latency, OCR fingerprint
+- Agent Steps: capture → ocr → stuck-search → policy selection (live)
+- Metrics dashboard: mini charts for fps, actions_per_s, blocks, stuck_events, decision_latency_ms, etc.
+- Window panel: view/apply emulator client rect (left, top, width, height)
+
+Emulator window alignment (use your screenshot’s rectangle)
+- In UI, open Window panel, click Refresh
+- Enter Left/Top/Width/Height that match your emulator in the screenshot
+- Click Apply (window is restored, resized, and set topmost)
+
+Key configuration (copy to .env)
+- Capture/input: CAPTURE_BACKEND, INPUT_BACKEND
+- Window: WINDOW_TITLE_HINT, WINDOW_ENFORCE_TOPMOST, WINDOW_LEFT, WINDOW_TOP, WINDOW_CLIENT_WIDTH, WINDOW_CLIENT_HEIGHT
+- Input scaling: INPUT_BASE_WIDTH, INPUT_BASE_HEIGHT, INPUT_EXCLUDE_BOTTOM_PX
+- OCR: TESSERACT_CMD, OCR_LANGUAGE
+- Stability: DRY_RUN, MAX_CONSEC_ERRORS, ERROR_BACKOFF_S
+- Safety: HARD_BLOCK_IAP, HARD_BLOCK_ITEM_CHANGES
+- Hugging Face: HUGGINGFACE_HUB_TOKEN, HF_MODEL_ID_POLICY, HF_MODEL_ID_JUDGE, HF_INFERENCE_ENDPOINT_URL
+
+Hugging Face agents (policy/judge)
+- Choose a small CPU-friendly policy to start: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+- Install PyTorch CPU if needed: pip install --index-url https://download.pytorch.org/whl/cpu torch
+- Set HUGGINGFACE_HUB_TOKEN if model is gated; accept model license on the model page
+- .env example:
+  - HF_MODEL_ID_POLICY=TinyLlama/TinyLlama-1.1B-Chat-v1.0
+  - HF_MODEL_ID_JUDGE=TinyLlama/TinyLlama-1.1B-Chat-v1.0 (optional)
+  - HF_INFERENCE_ENDPOINT_URL=... (optional)
+- Restart backend; UI will show “hf-policy” when active, otherwise “policy-lite”
+
+How the agent reasons (visible in UI)
+- Capture: screenshot of emulator client area (DPI-aware)
+- OCR: extract text (menu labels, dialogs). Safety rules scan OCR
+- Policy: heuristic or HF policy proposes action; judge optional
+- Stuck recovery: when repeated errors or unchanged OCR, the agent runs limited web searches using OCR hints and stores summarized facts to memory
+- Execution: scaled/clamped input sent to emulator (Windows SendInput)
+- Telemetry: status, steps, decisions, and metrics streamed live to UI
+
+Troubleshooting quick guide
+- Tesseract not found: set TESSERACT_CMD and ensure tessdata; OCR_LANGUAGE=eng
+- UI cannot connect: ensure backend on 127.0.0.1:8000; Vite proxy to /telemetry
+- Emulator not targeted: check WINDOW_TITLE_HINT and Window panel rect; ensure window is visible (not minimized)
+- Focus flapping: runner debounces topmost/resize; avoid active apps that steal focus
+- Repeating taps: heuristic rotates OCR targets, adds jitter, inserts waits/backs; stuck recovery enriches memory
+
+Roadmap to v2.0 (condensed)
+- v1.1.0 Input/Capture/Window stability: DPI-correct mapping, no black bars, reliable topmost/resize
+- v1.2.0 OCR & State: golden OCR corpus, robust text parsing for core menus
+- v1.3.0 Exploration & Stuck: diversified heuristics, backoff ladder, recovery success telemetry
+- v1.4.0 Safety: external/item-change guards hardened; negative test suite
+- v1.5.0 HF Agents: model checks, timeouts/fallbacks, parsing tests, latency budgets
+- v1.6.0 Analytics & Replay: action latencies, screen-diffs, session traces, UI trends & filters
+- v1.7.0 Reliability & CI: flake triage, CPU test matrix, artifacts
+- v2.0.0 Full Windows support: stable end-to-end exploration, safety guarantees, comprehensive docs
+
+Sync policy
+- Source of truth is README.md.
+- Maintain this Notion backup (notion.txt) alongside README changes.
+- Tip: when changing README, update this file in the same commit.
