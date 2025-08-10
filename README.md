@@ -209,6 +209,82 @@ Notes:
 - [ ] Multi‑device support; Windows/Linux hosts
 - [ ] Scenario editor for custom task graphs
 
+### Post‑1.0 plan to v2.0 — Tests, fixes, and full functionality
+
+The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional v2.0.0. Each minor version focuses on stabilizing core subsystems with measurable tests.
+
+#### v1.1.0 — Input, capture, and window stability
+- [ ] Coordinate mapping correctness across DPI/scales
+  - [ ] Unit: scale/clamp math for `INPUT_BASE_WIDTH/HEIGHT`, `INPUT_EXCLUDE_BOTTOM_PX`
+  - [ ] Golden: click heatmaps align with client rect at 100%, 125%, 150% DPI
+  - [ ] Integration: center/edge taps land within ±5 px on emulator
+- [ ] Window management race hardening
+  - [ ] Unit: client vs. window rect math; restore when minimized
+  - [ ] Integration: debounce topmost/resize prevents focus flapping
+  - [ ] Health: error when emulator not found; retries/backoff telemetry
+- [ ] Capture robustness
+  - [ ] Golden: window capture crops correctly (no black bars)
+  - [ ] Perf: 1–3 FPS sustained without stutter on CPU‑only
+
+#### v1.2.0 — OCR quality and state encoding
+- [ ] OCR accuracy improvements
+  - [ ] Configurable `TESSERACT_CMD`, language packs validation
+  - [ ] Golden OCR corpus for Epic Seven lobby/menus; ≥95% key token recall
+  - [ ] Noise handling: outlines, anti‑aliasing, shadowed text
+- [ ] State encoder coverage
+  - [ ] Parse more UI anchors (battle, event, summon, shop, arena, sanctuary)
+  - [ ] Unit: feature extraction determinism; hashing for identical frames
+  - [ ] Telemetry: OCR fingerprint uniqueness, distribution
+
+#### v1.3.0 — Policy exploration and stuck recovery
+- [ ] Heuristic exploration diversification
+  - [ ] Avoid repetition: adaptive jitter, rotation, cooldowns per label
+  - [ ] Backoff escalations: wait → back → alternate region sampling
+  - [ ] Unit: repetition controller; Integration: no >3 identical taps on static OCR
+- [ ] Stuck recovery playbook
+  - [ ] Web search hints gated by cooldown and privacy settings
+  - [ ] Memory enrichment: deduplicate by title/domain; size caps
+  - [ ] Telemetry: stuck events, recovery success ratio
+
+#### v1.4.0 — Safety guards and hard blocks
+- [ ] External navigation and item change guards
+  - [ ] Golden: block phrases (external links, YouTube, sell, remove equipment)
+  - [ ] Unit: keyword matchers with locale variants
+  - [ ] Integration: auto Back and recovery without crash
+- [ ] Negative test suite
+  - [ ] Ensure no action hits system taskbar/other apps
+  - [ ] Dry‑run mode parity (no input emitted)
+
+#### v1.5.0 — HF agents integration hardening
+- [ ] Local/hosted model selection and fallback logic
+  - [ ] Startup checks: gated models, token scope, CPU Torch availability
+  - [ ] Timeouts, retries, and degradation to heuristic
+- [ ] Evaluation harness
+  - [ ] Prompt fixtures and expected JSON action parsing
+  - [ ] Judge selection determinism under seeds
+  - [ ] Latency and cost budget telemetry
+
+#### v1.6.0 — Analytics, logging, and replay
+- [ ] Structured logs enrichment
+  - [ ] Action latencies, success/fail, post‑action screen diff magnitude
+  - [ ] Session replay: compact trace (frame hash + action + OCR fp)
+- [ ] UI analytics
+  - [ ] Trends for FPS, actions, blocks, stuck, unique screens explored
+  - [ ] Decision table filters (who, action type, errors)
+
+#### v1.7.0 — End‑to‑end reliability and CI
+- [ ] Flake dashboard: triage, quarantine, auto‑retry
+- [ ] CI jobs for unit + golden tests (CPU only)
+- [ ] Artifact uploads: sample frames, OCR JSON, coverage reports
+
+#### v2.0.0 — Full Windows emulator functionality
+- [ ] Stable capture/input across common DPIs and window states
+- [ ] Robust exploration: avoids repeats; progresses through core menus
+- [ ] Safety‑first: no external links, no hero/equipment sell/remove
+- [ ] HF agents optional but seamless; falls back gracefully
+- [ ] Comprehensive docs and troubleshooting; one‑click Windows setup
+- [ ] Test suite green: unit, golden OCR, integration, telemetry assertions
+
 Definition of Done per version:
 
 - Major features and all listed checkboxes are completed and tested
