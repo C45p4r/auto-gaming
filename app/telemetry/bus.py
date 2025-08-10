@@ -90,6 +90,17 @@ class TelemetryBus:
         self._decision_log = self._decision_log[-200:]
         await self._broadcast({"type": "decision", "data": entry.__dict__})
 
+    async def publish_step(self, kind: str, payload: dict[str, Any]) -> None:
+        msg = {
+            "type": "step",
+            "data": {
+                "timestamp_utc": datetime.now(tz=UTC).isoformat(),
+                "kind": kind,
+                "payload": payload,
+            },
+        }
+        await self._broadcast(msg)
+
     async def set_guidance(self, guidance: Guidance) -> None:
         self._guidance = guidance
         await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})

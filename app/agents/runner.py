@@ -137,8 +137,11 @@ class AgentRunner:
 
             # Capture and decide
             try:
+                await bus.publish_step("capture:start", {"note": "capturing frame"})
                 image = capture_frame()
+                await bus.publish_step("capture:end", {"size": getattr(image, 'size', None)})
                 state = encode_state(image)
+                await bus.publish_step("ocr", {"text": (state.ocr_text or "")[:400]})
                 # counters
                 self._frames += 1
                 now_fps = time.perf_counter()
@@ -227,6 +230,7 @@ class AgentRunner:
                         pass
                     try:
                         hints = [line for line in state.ocr_text.splitlines() if line.strip()][:3]
+                        await bus.publish_step("stuck:search:start", {"hints": hints})
                         # Simple Google queries; relies on fetch_urls to rate-limit politely
                         queries = [f"https://www.google.com/search?q=Epic7%20{h}" for h in hints]
                         docs = fetch_urls(queries[:2])
@@ -237,11 +241,13 @@ class AgentRunner:
                         ]
                         if facts:
                             mem.add_facts(facts)
+                        await bus.publish_step("stuck:search:end", {"facts": [f.title for f in facts]})
                     except Exception:
                         pass
 
                 decide_t0 = time.perf_counter()
                 score, action, who = await orchestrate(state)
+                await bus.publish_step("policy", {"who": who, "score": score, "action": action.__class__.__name__})
                 await bus.publish_status(
                     task=f"{who} proposing action",
                     confidence=float(score),

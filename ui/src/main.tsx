@@ -20,12 +20,17 @@ type StatusPayload = {
   model_policy?: string;
   model_id_policy?: string;
 };
-type TelemetryMsg = { type: "status"; data: StatusPayload } | { type: "decision"; data: any } | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } };
+type TelemetryMsg =
+  | { type: "status"; data: StatusPayload }
+  | { type: "decision"; data: any }
+  | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } }
+  | { type: "step"; data: { timestamp_utc: string; kind: string; payload: any } };
 
 function App() {
   const [status, setStatus] = useState<StatusPayload>({ agent_state: null, task: null, confidence: null, next: null });
   const [log, setLog] = useState<string[]>([]);
   const [decisions, setDecisions] = useState<any[]>([]);
+  const [steps, setSteps] = useState<{ timestamp_utc: string; kind: string; payload: any }[]>([]);
   const [guidance, setGuidance] = useState<{ prioritize: string[]; avoid: string[] }>({ prioritize: [], avoid: [] });
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -37,6 +42,7 @@ function App() {
       if (msg.type === "status") setStatus(msg.data);
       if (msg.type === "decision") setDecisions((d) => [msg.data, ...d].slice(0, 200));
       if (msg.type === "guidance") setGuidance(msg.data);
+      if (msg.type === "step") setSteps((s) => [msg.data, ...s].slice(0, 200));
       setLog((l) => [new Date().toLocaleTimeString() + " " + (typeof msg === "string" ? msg : JSON.stringify(msg)), ...l].slice(0, 200));
     };
     wsRef.current = ws;
@@ -64,6 +70,17 @@ function App() {
             Stop
           </button>
         </div>
+      </section>
+      <section>
+        <h2>Agent Steps</h2>
+        <ul>
+          {steps.map((s, idx) => (
+            <li key={idx}>
+              <code>{s.timestamp_utc}</code> — <strong>{s.kind}</strong>
+              <pre style={{ whiteSpace: "pre-wrap", overflow: "auto", background: "#f9fafb", padding: 8 }}>{JSON.stringify(s.payload, null, 2)}</pre>
+            </li>
+          ))}
+        </ul>
       </section>
       <section>
         <h2>Status</h2>
@@ -202,24 +219,52 @@ function WindowControls() {
   }, []);
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-      <button onClick={refresh} style={{ padding: "6px 12px" }}>Refresh</button>
+      <button
+        onClick={refresh}
+        style={{ padding: "6px 12px" }}>
+        Refresh
+      </button>
       <label>
         Left
-        <input type="number" value={rect?.left ?? 0} onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), left: Number(e.target.value) })} style={{ width: 90, marginLeft: 6 }} />
+        <input
+          type="number"
+          value={rect?.left ?? 0}
+          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), left: Number(e.target.value) })}
+          style={{ width: 90, marginLeft: 6 }}
+        />
       </label>
       <label>
         Top
-        <input type="number" value={rect?.top ?? 0} onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), top: Number(e.target.value) })} style={{ width: 90, marginLeft: 6 }} />
+        <input
+          type="number"
+          value={rect?.top ?? 0}
+          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), top: Number(e.target.value) })}
+          style={{ width: 90, marginLeft: 6 }}
+        />
       </label>
       <label>
         Width
-        <input type="number" value={rect?.width ?? 1280} onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), width: Number(e.target.value) })} style={{ width: 90, marginLeft: 6 }} />
+        <input
+          type="number"
+          value={rect?.width ?? 1280}
+          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), width: Number(e.target.value) })}
+          style={{ width: 90, marginLeft: 6 }}
+        />
       </label>
       <label>
         Height
-        <input type="number" value={rect?.height ?? 720} onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), height: Number(e.target.value) })} style={{ width: 90, marginLeft: 6 }} />
+        <input
+          type="number"
+          value={rect?.height ?? 720}
+          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), height: Number(e.target.value) })}
+          style={{ width: 90, marginLeft: 6 }}
+        />
       </label>
-      <button onClick={apply} style={{ padding: "6px 12px" }}>Apply</button>
+      <button
+        onClick={apply}
+        style={{ padding: "6px 12px" }}>
+        Apply
+      </button>
     </div>
   );
 }
