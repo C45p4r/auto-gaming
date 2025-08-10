@@ -10,6 +10,8 @@ import random
 # Sticky memory to reduce repeated tapping on unchanged scenes
 _last_ocr_fingerprint: str | None = None
 _repeat_count: int = 0
+# Track per-label cooldown to avoid immediate re-taps on the same menu label
+_label_cooldown: dict[str, int] = {}
 # Rotate through matched targets to avoid hammering a single spot
 _last_choice_idx: int = -1
 
@@ -48,10 +50,11 @@ def propose_action(state: GameState) -> tuple[float, object]:
     _last_ocr_fingerprint = fp
 
     if _repeat_count >= 3:
-        # After repeated identical frames, first try a brief wait; occasionally send Back
+        # Progressive backoff ladder: wait → back → random explore band taps
         if _repeat_count % 5 == 0:
             return score, BackAction()
-        return score, WaitAction(seconds=min(2.0, 0.5 + 0.3 * _repeat_count))
+        # Always insert a short wait on third and subsequent repeats
+        return score, WaitAction(seconds=min(2.0, 0.4 + random.random() * 0.6))
 
     # OCR-guided targeting: choose visible menu items and rotate among them
     text = (state.ocr_text or "").lower()
@@ -60,8 +63,10 @@ def propose_action(state: GameState) -> tuple[float, object]:
         if name in text:
             matched.append((name, xf, yf))
     if matched:
-        _last_choice_idx = (_last_choice_idx + 1) % len(matched)
-        _name, xf, yf = matched[_last_choice_idx]
+        # Filter out labels on cooldown
+        ready = [t for t in matched if _label_cooldown.get(t[0], 0) <= 0] or matched
+        _last_choice_idx = (_last_choice_idx + 1) % len(ready)
+        name, xf, yf = ready[_last_choice_idx]
         base_w = max(1, int(settings.input_base_width))
         base_h = max(1, int(settings.input_base_height))
         # small jitter to avoid dead pixels/overlays
@@ -72,6 +77,11 @@ def propose_action(state: GameState) -> tuple[float, object]:
         # keep within base bounds
         x = max(0, min(base_w - 1, x))
         y = max(0, min(base_h - 1, y))
+        # Set a short cooldown to avoid immediate re-selection
+        _label_cooldown[name] = 3
+        # Decay existing cooldowns
+        for k in list(_label_cooldown.keys()):
+            _label_cooldown[k] = max(0, _label_cooldown[k] - 1)
         return score, TapAction(x=x, y=y)
 
     # Simple heuristic: if stamina exists and is low percentage, wait; else tap near center to advance
@@ -79,9 +89,9 @@ def propose_action(state: GameState) -> tuple[float, object]:
         pct = state.stamina_current / max(1, state.stamina_cap)
         if pct < 0.1:
             return score, WaitAction(seconds=2.0)
-    # Fallback: near-center tap, nudged upward 5%
+    # Fallback exploration: tap in a horizontal exploration band (30%-60% height)
     base_w = max(1, int(settings.input_base_width))
     base_h = max(1, int(settings.input_base_height))
-    cx = base_w // 2
-    cy = int(base_h * 0.45)
-    return score, TapAction(x=cx, y=cy)
+    x = int(base_w * (0.35 + random.random() * 0.30))
+    y = int(base_h * (0.30 + random.random() * 0.30))
+    return score, TapAction(x=x, y=y)
