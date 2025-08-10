@@ -58,6 +58,8 @@ class AgentRunner:
         self._window_ok: bool = False
         self._flake = FlakeTracker()
         self._cache = DecisionCache()
+        self._mem_store = MemoryStore()
+        self._last_frame_save_ts: float = 0.0
 
     def get_state(self) -> RunState:
         return self._state
@@ -175,11 +177,9 @@ class AgentRunner:
 
                 # Store a lightweight observation of the current screen into memory for recall
                 try:
-                    metrics = compute_metrics(state)
-                    title = f"obs:{metrics.get('screen_kind','unknown')}:{int(time.time())}"
+                    title = f"obs:ocr:{int(time.time())}"
                     summary = (state.ocr_text or "")[:300]
-                    mem = MemoryStore()
-                    mem.add_facts([Fact(id=None, title=title, source_url="local:ocr", summary=summary)])
+                    self._mem_store.add_facts([Fact(id=None, title=title, source_url="local:ocr", summary=summary)])
                 except Exception:
                     pass
                 # External navigation guard: block actions if UI suggests leaving the game
@@ -207,7 +207,6 @@ class AgentRunner:
 
                 # Item change guard: block any sell/remove/unequip flows until policy is mature
                 if settings.hard_block_item_changes and detect_item_change_text(state.ocr_text):
-                    self._blocks += 1
                     self._blocks += 1
                     try:
                         metrics_store.add_point("blocks", float(self._blocks))
@@ -240,13 +239,12 @@ class AgentRunner:
                         # Simple Google queries; relies on fetch_urls to rate-limit politely
                         queries = [f"https://www.google.com/search?q=Epic7%20{h}" for h in hints]
                         docs = fetch_urls(queries[:2])
-                        mem = MemoryStore()
                         facts = [
                             Fact(id=None, title=d.title, source_url=d.url, summary=summarize(d))
                             for d in docs
                         ]
                         if facts:
-                            mem.add_facts(facts)
+                            self._mem_store.add_facts(facts)
                         await bus.publish_step("stuck:search:end", {"facts": [f.title for f in facts]})
                     except Exception:
                         pass
@@ -270,19 +268,22 @@ class AgentRunner:
                     next_step=action.__class__.__name__,
                     extra=self._stats_extra(),
                 )
-                # Save recent frame snapshot to static/frames with OCR JSON for Memory tab
+                # Save recent frame snapshot to static/frames with OCR JSON for Memory tab (throttled)
                 try:
-                    frames_dir = Path("static/frames")
-                    frames_dir.mkdir(parents=True, exist_ok=True)
-                    stamp = int(time.time() * 1000)
-                    img_path = frames_dir / f"frame_{stamp}.png"
-                    image.save(img_path)
-                    import json
+                    now_ts = time.perf_counter()
+                    if (now_ts - self._last_frame_save_ts) >= 2.0:
+                        frames_dir = Path("static/frames")
+                        frames_dir.mkdir(parents=True, exist_ok=True)
+                        stamp = int(time.time() * 1000)
+                        img_path = frames_dir / f"frame_{stamp}.png"
+                        image.save(img_path)
+                        import json
 
-                    (frames_dir / f"frame_{stamp}.json").write_text(
-                        json.dumps({"text": state.ocr_text or ""}, ensure_ascii=False, indent=2),
-                        encoding="utf-8",
-                    )
+                        (frames_dir / f"frame_{stamp}.json").write_text(
+                            json.dumps({"text": state.ocr_text or ""}, ensure_ascii=False, indent=2),
+                            encoding="utf-8",
+                        )
+                        self._last_frame_save_ts = now_ts
                 except Exception:
                     pass
                 if not settings.dry_run:

@@ -58,9 +58,11 @@ def propose_action(state: GameState) -> tuple[float, object]:
 
     # OCR-guided targeting: choose visible menu items and rotate among them
     text = (state.ocr_text or "").lower()
+    # quick path: if tokens available, build a set for O(1) contains
+    token_set = set((state.ocr_tokens or []))
     matched: list[tuple[str, float, float]] = []
     for name, xf, yf in _TARGETS:
-        if name in text:
+        if (name in text) or (name in token_set):
             matched.append((name, xf, yf))
     if matched:
         # Filter out labels on cooldown
