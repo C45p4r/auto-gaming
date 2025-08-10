@@ -146,6 +146,10 @@ function App() {
         <WindowControls />
       </section>
       <section>
+        <h2>Doctor</h2>
+        <DoctorPanel />
+      </section>
+      <section>
         <h2>Guidance</h2>
         <div>Prioritize: {guidance.prioritize.join(", ") || "-"}</div>
         <div>Avoid: {guidance.avoid.join(", ") || "-"}</div>
@@ -360,6 +364,32 @@ function WindowControls() {
         style={{ padding: "6px 12px" }}>
         Apply
       </button>
+    </div>
+  );
+}
+
+function DoctorPanel() {
+  const [data, setData] = useState<{ ok: boolean; issues: string[]; details: Record<string, any> } | null>(null);
+  async function refresh() {
+    const j = await fetch("/telemetry/doctor/self-check").then((r) => r.json());
+    setData(j);
+  }
+  useEffect(() => {
+    refresh();
+  }, []);
+  if (!data) return null;
+  return (
+    <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
+      <div>Status: {data.ok ? "OK" : "Issues"}</div>
+      {!data.ok && (
+        <ul>
+          {data.issues.map((x, i) => (
+            <li key={i} style={{ color: "#b91c1c" }}>{x}</li>
+          ))}
+        </ul>
+      )}
+      <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(data.details, null, 2)}</pre>
+      <button onClick={refresh} style={{ padding: "6px 12px" }}>Re-run</button>
     </div>
   );
 }

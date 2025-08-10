@@ -18,6 +18,7 @@ from app.config import settings
 from pathlib import Path
 import base64
 from datetime import datetime
+from app.diagnostics.doctor import run_self_check
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -116,6 +117,12 @@ async def memory_recent(limit: int = 20) -> list[dict[str, Any]]:
             "ocr": ocr_text,
         })
     return items
+
+
+@router.get("/doctor/self-check")
+async def doctor_self_check() -> dict[str, Any]:
+    res = run_self_check()
+    return {"ok": res.ok, "issues": res.issues, "details": res.details}
 
 
 @router.get("/window/rect")
