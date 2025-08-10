@@ -59,10 +59,16 @@ EXTERNAL_NAVIGATION_TERMS: set[str] = {
     "discord",
 }
 
+# Add common obfuscated variants (no spaces/punctuation) to withstand OCR quirks
+EXTERNAL_NAVIGATION_COMPACT: set[str] = {t.replace(" ", "").replace(".", "") for t in EXTERNAL_NAVIGATION_TERMS}
+
 
 def detect_external_navigation_text(text: str) -> bool:
     t = text.lower()
-    return any(term in t for term in EXTERNAL_NAVIGATION_TERMS)
+    if any(term in t for term in EXTERNAL_NAVIGATION_TERMS):
+        return True
+    compact = "".join(ch for ch in t if ch.isalnum())
+    return any(term in compact for term in EXTERNAL_NAVIGATION_COMPACT)
 
 
 ITEM_CHANGE_TERMS: set[str] = {
@@ -76,11 +82,15 @@ ITEM_CHANGE_TERMS: set[str] = {
     "dismiss hero",
     "retire hero",
 }
+ITEM_CHANGE_COMPACT: set[str] = {t.replace(" ", "") for t in ITEM_CHANGE_TERMS}
 
 
 def detect_item_change_text(text: str) -> bool:
     t = text.lower()
-    return any(term in t for term in ITEM_CHANGE_TERMS)
+    if any(term in t for term in ITEM_CHANGE_TERMS):
+        return True
+    compact = "".join(ch for ch in t if ch.isalnum())
+    return any(term in compact for term in ITEM_CHANGE_COMPACT)
 
 
 def screen_change(prev: Image.Image, cur: Image.Image, diff_threshold: float = 0.10) -> bool:
