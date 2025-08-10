@@ -214,6 +214,7 @@ Notes:
 The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional v2.0.0. Each minor version focuses on stabilizing core subsystems with measurable tests.
 
 #### v1.1.0 — Input, capture, and window stability
+
 - [ ] Coordinate mapping correctness across DPI/scales
   - [ ] Unit: scale/clamp math for `INPUT_BASE_WIDTH/HEIGHT`, `INPUT_EXCLUDE_BOTTOM_PX`
   - [ ] Golden: click heatmaps align with client rect at 100%, 125%, 150% DPI
@@ -227,6 +228,7 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Perf: 1–3 FPS sustained without stutter on CPU‑only
 
 #### v1.2.0 — OCR quality and state encoding
+
 - [ ] OCR accuracy improvements
   - [ ] Configurable `TESSERACT_CMD`, language packs validation
   - [ ] Golden OCR corpus for Epic Seven lobby/menus; ≥95% key token recall
@@ -237,6 +239,7 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Telemetry: OCR fingerprint uniqueness, distribution
 
 #### v1.3.0 — Policy exploration and stuck recovery
+
 - [ ] Heuristic exploration diversification
   - [ ] Avoid repetition: adaptive jitter, rotation, cooldowns per label
   - [ ] Backoff escalations: wait → back → alternate region sampling
@@ -247,6 +250,7 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Telemetry: stuck events, recovery success ratio
 
 #### v1.4.0 — Safety guards and hard blocks
+
 - [ ] External navigation and item change guards
   - [ ] Golden: block phrases (external links, YouTube, sell, remove equipment)
   - [ ] Unit: keyword matchers with locale variants
@@ -256,6 +260,7 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Dry‑run mode parity (no input emitted)
 
 #### v1.5.0 — HF agents integration hardening
+
 - [ ] Local/hosted model selection and fallback logic
   - [ ] Startup checks: gated models, token scope, CPU Torch availability
   - [ ] Timeouts, retries, and degradation to heuristic
@@ -265,6 +270,7 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Latency and cost budget telemetry
 
 #### v1.6.0 — Analytics, logging, and replay
+
 - [ ] Structured logs enrichment
   - [ ] Action latencies, success/fail, post‑action screen diff magnitude
   - [ ] Session replay: compact trace (frame hash + action + OCR fp)
@@ -273,11 +279,13 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Decision table filters (who, action type, errors)
 
 #### v1.7.0 — End‑to‑end reliability and CI
+
 - [ ] Flake dashboard: triage, quarantine, auto‑retry
 - [ ] CI jobs for unit + golden tests (CPU only)
 - [ ] Artifact uploads: sample frames, OCR JSON, coverage reports
 
 #### v2.0.0 — Full Windows emulator functionality
+
 - [ ] Stable capture/input across common DPIs and window states
 - [ ] Robust exploration: avoids repeats; progresses through core menus
 - [ ] Safety‑first: no external links, no hero/equipment sell/remove

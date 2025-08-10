@@ -14,6 +14,11 @@ type StatusPayload = {
   backs?: number;
   blocks?: number;
   stuck_events?: number;
+  window_ok?: number;
+  capture_backend?: string;
+  input_backend?: string;
+  model_policy?: string;
+  model_id_policy?: string;
 };
 type TelemetryMsg = { type: "status"; data: StatusPayload } | { type: "decision"; data: any } | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } };
 
@@ -94,10 +99,13 @@ function App() {
             label="Blocks"
             value={status.blocks ?? 0}
           />
-          <Stat
-            label="Stuck"
-            value={status.stuck_events ?? 0}
-          />
+          <Stat label="Stuck" value={status.stuck_events ?? 0} />
+          <Stat label="Window OK" value={status.window_ok ? "Yes" : "No"} />
+          <Stat label="Capture" value={status.capture_backend ?? "-"} />
+          <Stat label="Input" value={status.input_backend ?? "-"} />
+        </div>
+        <div style={{ marginTop: 6, color: "#6b7280", fontSize: 12 }}>
+          Model: {status.model_policy} {status.model_id_policy}
         </div>
       </section>
       <section>
@@ -128,7 +136,9 @@ function App() {
           <tbody>
             {decisions.map((d, idx) => (
               <tr key={idx}>
-                <td style={{ padding: "6px 4px" }}><code>{d.timestamp_utc}</code></td>
+                <td style={{ padding: "6px 4px" }}>
+                  <code>{d.timestamp_utc}</code>
+                </td>
                 <td style={{ padding: "6px 4px" }}>{d.who}</td>
                 <td style={{ padding: "6px 4px" }}>{d.action?.type}</td>
                 <td style={{ padding: "6px 4px" }}>{typeof d.latency_ms === "number" ? d.latency_ms.toFixed(1) : "-"}</td>

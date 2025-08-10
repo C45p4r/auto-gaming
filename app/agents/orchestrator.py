@@ -32,7 +32,7 @@ def agent_policy(state: GameState) -> Candidate:
             if _hf_policy is None:
                 _hf_policy = HFPolicy()
             proposal = _hf_policy.propose(state)
-            return proposal.score, proposal.action, proposal.who
+            return proposal.score, proposal.action, "hf-policy"
         except Exception:
             pass
     # Fallback to heuristic

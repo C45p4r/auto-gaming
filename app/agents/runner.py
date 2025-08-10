@@ -23,6 +23,7 @@ from app.safety.guards import detect_external_navigation_text, detect_item_chang
 from app.services.search.web_ingest import fetch_urls, summarize
 from app.memory.store import MemoryStore, Fact
 from app.metrics.registry import compute_metrics
+from app.analytics.metrics import store as metrics_store
 
 
 RunState = Literal["idle", "running", "paused", "stopped"]
@@ -49,6 +50,8 @@ class AgentRunner:
         self._stuck_events: int = 0
         self._last_fps_time: float = time.perf_counter()
         self._fps: float = 0.0
+        self._actions_at_last_fps: int = 0
+        self._window_ok: bool = False
 
     def get_state(self) -> RunState:
         return self._state
@@ -58,13 +61,13 @@ class AgentRunner:
             # If paused, resume
             self._pause_event.set()
             self._state = "running"
-            await bus.publish_status(task="running", confidence=None, next_step=None, extra={"agent_state": self._state})
+            await bus.publish_status(task="running", confidence=None, next_step=None, extra={"agent_state": self._state, **self._static_env_extra()})
             return
 
         self._state = "running"
         self._pause_event.set()
         self._task = asyncio.create_task(self._run_loop())
-        await bus.publish_status(task="running", confidence=None, next_step=None, extra={"agent_state": self._state})
+        await bus.publish_status(task="running", confidence=None, next_step=None, extra={"agent_state": self._state, **self._static_env_extra()})
 
     async def pause(self) -> None:
         if self._state == "running":
@@ -96,6 +99,7 @@ class AgentRunner:
                 now = time.perf_counter()
                 try:
                     hwnd = find_window_handle(settings.window_title_hint)
+                    self._window_ok = True
                     if not self._did_initial_enforce:
                         set_topmost(hwnd, True)
                         move_resize(
@@ -126,6 +130,7 @@ class AgentRunner:
                             self._last_resize_ts = now
                 except Exception:
                     # best-effort: continue
+                    self._window_ok = False
                     pass
 
             start_time = time.perf_counter()
@@ -141,6 +146,15 @@ class AgentRunner:
                 if dt >= 1.0:
                     self._fps = self._frames / dt
                     self._frames = 0
+                    # metrics: fps and actions_per_s
+                    try:
+                        metrics_store.add_point("fps", self._fps)
+                        actions_delta = max(0, self._actions - self._actions_at_last_fps)
+                        actions_per_s = actions_delta / dt if dt > 0 else 0.0
+                        metrics_store.add_point("actions_per_s", actions_per_s)
+                        self._actions_at_last_fps = self._actions
+                    except Exception:
+                        pass
                     self._last_fps_time = now_fps
                 # Track OCR stability to avoid repeating same actions
                 fp = (state.ocr_text or "").strip().lower()[:200]
@@ -162,6 +176,11 @@ class AgentRunner:
                 # External navigation guard: block actions if UI suggests leaving the game
                 if detect_external_navigation_text(state.ocr_text):
                     self._blocks += 1
+                    self._blocks += 1
+                    try:
+                        metrics_store.add_point("blocks", float(self._blocks))
+                    except Exception:
+                        pass
                     await bus.publish_status(
                         task="blocked_external_navigation",
                         confidence=None,
@@ -180,6 +199,11 @@ class AgentRunner:
                 # Item change guard: block any sell/remove/unequip flows until policy is mature
                 if settings.hard_block_item_changes and detect_item_change_text(state.ocr_text):
                     self._blocks += 1
+                    self._blocks += 1
+                    try:
+                        metrics_store.add_point("blocks", float(self._blocks))
+                    except Exception:
+                        pass
                     await bus.publish_status(
                         task="blocked_item_change",
                         confidence=None,
@@ -197,6 +221,10 @@ class AgentRunner:
                 # If errors or UI unchanged for several frames, try minimal web search to enrich memory
                 if consec_errors >= 2 or self._unchanged_count >= 3:
                     self._stuck_events += 1
+                    try:
+                        metrics_store.add_point("stuck_events", float(self._stuck_events))
+                    except Exception:
+                        pass
                     try:
                         hints = [line for line in state.ocr_text.splitlines() if line.strip()][:3]
                         # Simple Google queries; relies on fetch_urls to rate-limit politely
@@ -235,6 +263,10 @@ class AgentRunner:
                 try:
                     ocr_fp = (state.ocr_text or "").strip().lower()[:120]
                     latency_ms = (time.perf_counter() - decide_t0) * 1000.0
+                    try:
+                        metrics_store.add_point("decision_latency_ms", float(latency_ms))
+                    except Exception:
+                        pass
                     # minimal metric deltas placeholder (0) until we compute before/after deltas
                     await bus.publish_decision(
                         action={"type": name, **getattr(action, "__dict__", {})},
@@ -282,5 +314,21 @@ runner = AgentRunner()
             "backs": self._backs,
             "blocks": self._blocks,
             "stuck_events": self._stuck_events,
+            "window_ok": 1 if self._window_ok else 0,
+            **self._static_env_extra(),
         }
+
+    def _static_env_extra(self) -> dict[str, str | bool]:
+        try:
+            return {
+                "capture_backend": str(settings.capture_backend or "auto"),
+                "input_backend": str(settings.input_backend or "auto"),
+                "window_enforce_topmost": bool(settings.window_enforce_topmost),
+                "window_title_hint": str(settings.window_title_hint or ""),
+                "model_policy": "hf-policy" if settings.hf_model_id_policy else "policy-lite",
+                "model_id_policy": str(settings.hf_model_id_policy or ""),
+                "model_id_judge": str(settings.hf_model_id_judge or ""),
+            }
+        except Exception:
+            return {}
 
