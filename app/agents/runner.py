@@ -27,6 +27,7 @@ from app.metrics.registry import compute_metrics
 from app.analytics.metrics import store as metrics_store
 from app.analytics.session import session, Step
 from app.reliability.flake import FlakeTracker
+from app.policy.cache import DecisionCache
 
 
 RunState = Literal["idle", "running", "paused", "stopped"]
@@ -56,6 +57,7 @@ class AgentRunner:
         self._actions_at_last_fps: int = 0
         self._window_ok: bool = False
         self._flake = FlakeTracker()
+        self._cache = DecisionCache()
 
     def get_state(self) -> RunState:
         return self._state
@@ -250,7 +252,17 @@ class AgentRunner:
                         pass
 
                 decide_t0 = time.perf_counter()
-                score, action, who = await orchestrate(state)
+                # Use state hash to short-circuit decisions if identical
+                cached = None
+                try:
+                    if state.state_hash:
+                        cached = self._cache.get(state.state_hash)
+                except Exception:
+                    cached = None
+                if cached is not None:
+                    score, action, who = cached
+                else:
+                    score, action, who = await orchestrate(state)
                 await bus.publish_step("policy", {"who": who, "score": score, "action": action.__class__.__name__})
                 await bus.publish_status(
                     task=f"{who} proposing action",
@@ -303,6 +315,12 @@ class AgentRunner:
                         ocr_fp=ocr_fp,
                         metrics={},
                     )
+                    # Populate decision cache for identical states
+                    try:
+                        if state.state_hash:
+                            self._cache.set(state.state_hash, score, action, who)
+                    except Exception:
+                        pass
                     # Append to session replay log (reference saved frame path if available)
                     try:
                         session.add(
