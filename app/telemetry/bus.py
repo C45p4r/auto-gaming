@@ -13,6 +13,11 @@ class DecisionLogEntry:
     action: dict[str, Any]
     reason: str
     metric_deltas: dict[str, float]
+    who: str
+    success: bool
+    latency_ms: float
+    ocr_fp: str
+    metrics: dict[str, float]
 
 
 @dataclass
@@ -60,13 +65,26 @@ class TelemetryBus:
         await self._broadcast({"type": "status", "data": self._status})
 
     async def publish_decision(
-        self, action: dict[str, Any], reason: str, metric_deltas: dict[str, float]
+        self,
+        action: dict[str, Any],
+        reason: str,
+        metric_deltas: dict[str, float],
+        who: str,
+        success: bool,
+        latency_ms: float,
+        ocr_fp: str,
+        metrics: dict[str, float] | None = None,
     ) -> None:
         entry = DecisionLogEntry(
             timestamp_utc=datetime.now(tz=UTC).isoformat(),
             action=action,
             reason=reason,
             metric_deltas=metric_deltas,
+            who=who,
+            success=success,
+            latency_ms=float(latency_ms),
+            ocr_fp=ocr_fp,
+            metrics=metrics or {},
         )
         self._decision_log.append(entry)
         self._decision_log = self._decision_log[-200:]

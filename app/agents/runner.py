@@ -212,6 +212,7 @@ class AgentRunner:
                     except Exception:
                         pass
 
+                decide_t0 = time.perf_counter()
                 score, action, who = await orchestrate(state)
                 await bus.publish_status(
                     task=f"{who} proposing action",
@@ -230,6 +231,23 @@ class AgentRunner:
                         self._swipes += 1
                     elif name == "BackAction":
                         self._backs += 1
+                # publish decision log with context
+                try:
+                    ocr_fp = (state.ocr_text or "").strip().lower()[:120]
+                    latency_ms = (time.perf_counter() - decide_t0) * 1000.0
+                    # minimal metric deltas placeholder (0) until we compute before/after deltas
+                    await bus.publish_decision(
+                        action={"type": name, **getattr(action, "__dict__", {})},
+                        reason=f"{who} selected with score={score:.2f}",
+                        metric_deltas={},
+                        who=who,
+                        success=True,
+                        latency_ms=latency_ms,
+                        ocr_fp=ocr_fp,
+                        metrics={},
+                    )
+                except Exception:
+                    pass
                 consec_errors = 0
             except Exception as exc:
                 logger.exception("runner_loop_error")

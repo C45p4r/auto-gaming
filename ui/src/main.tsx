@@ -70,13 +70,34 @@ function App() {
       <section>
         <h2>Performance</h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-          <Stat label="FPS" value={status.fps !== undefined ? status.fps.toFixed(2) : "-"} />
-          <Stat label="Actions" value={status.actions ?? 0} />
-          <Stat label="Taps" value={status.taps ?? 0} />
-          <Stat label="Swipes" value={status.swipes ?? 0} />
-          <Stat label="Backs" value={status.backs ?? 0} />
-          <Stat label="Blocks" value={status.blocks ?? 0} />
-          <Stat label="Stuck" value={status.stuck_events ?? 0} />
+          <Stat
+            label="FPS"
+            value={status.fps !== undefined ? status.fps.toFixed(2) : "-"}
+          />
+          <Stat
+            label="Actions"
+            value={status.actions ?? 0}
+          />
+          <Stat
+            label="Taps"
+            value={status.taps ?? 0}
+          />
+          <Stat
+            label="Swipes"
+            value={status.swipes ?? 0}
+          />
+          <Stat
+            label="Backs"
+            value={status.backs ?? 0}
+          />
+          <Stat
+            label="Blocks"
+            value={status.blocks ?? 0}
+          />
+          <Stat
+            label="Stuck"
+            value={status.stuck_events ?? 0}
+          />
         </div>
       </section>
       <section>
@@ -94,13 +115,28 @@ function App() {
       </section>
       <section>
         <h2>Decisions</h2>
-        <ul>
-          {decisions.map((d, idx) => (
-            <li key={idx}>
-              <code>{d.timestamp_utc}</code> — {d.reason}
-            </li>
-          ))}
-        </ul>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Time</th>
+              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Who</th>
+              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Action</th>
+              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Latency (ms)</th>
+              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>OCR</th>
+            </tr>
+          </thead>
+          <tbody>
+            {decisions.map((d, idx) => (
+              <tr key={idx}>
+                <td style={{ padding: "6px 4px" }}><code>{d.timestamp_utc}</code></td>
+                <td style={{ padding: "6px 4px" }}>{d.who}</td>
+                <td style={{ padding: "6px 4px" }}>{d.action?.type}</td>
+                <td style={{ padding: "6px 4px" }}>{typeof d.latency_ms === "number" ? d.latency_ms.toFixed(1) : "-"}</td>
+                <td style={{ padding: "6px 4px", maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.ocr_fp}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
       <section>
         <MetricsChart />
