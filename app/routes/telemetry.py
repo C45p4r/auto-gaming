@@ -15,6 +15,9 @@ from app.services.capture.window_manage import (
     set_topmost,
 )
 from app.config import settings
+from pathlib import Path
+import base64
+from datetime import datetime
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -87,6 +90,32 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 pass
     except WebSocketDisconnect:
         await bus.unsubscribe(q)
+
+
+@router.get("/memory/recent")
+async def memory_recent(limit: int = 20) -> list[dict[str, Any]]:
+    frames_dir = Path("static/frames")
+    items: list[dict[str, Any]] = []
+    # Recent frames named frame_*.png with optional frame_*.json (ocr)
+    pngs = sorted(frames_dir.glob("frame_*.png"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]
+    for p in pngs:
+        ts = p.stem.replace("frame_", "")
+        ocr_path = p.with_suffix(".json")
+        ocr_text = None
+        if ocr_path.exists():
+            try:
+                import json
+
+                o = json.loads(ocr_path.read_text(encoding="utf-8"))
+                ocr_text = o.get("text")
+            except Exception:
+                pass
+        items.append({
+            "ts": ts,
+            "image_url": f"/static/frames/{p.name}",
+            "ocr": ocr_text,
+        })
+    return items
 
 
 @router.get("/window/rect")

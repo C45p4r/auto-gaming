@@ -1,5 +1,7 @@
 import logging
+from pathlib import Path
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.analytics import router as analytics_router
@@ -29,6 +31,11 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    # Serve static assets (e.g., recent screenshots for Memory tab)
+    static_dir = Path("static")
+    (static_dir / "frames").mkdir(parents=True, exist_ok=True)
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
     app.include_router(telemetry_router)
     app.include_router(analytics_router)

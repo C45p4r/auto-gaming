@@ -184,6 +184,10 @@ function App() {
       <section>
         <MetricsChart />
       </section>
+      <section>
+        <h2>Memory</h2>
+        <MemoryPanel />
+      </section>
     </div>
   );
 }
@@ -195,6 +199,37 @@ function Stat(props: { label: string; value: string | number }) {
     <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
       <div style={{ color: "#6b7280", fontSize: 12 }}>{props.label}</div>
       <div style={{ fontSize: 18, fontWeight: 600 }}>{props.value}</div>
+    </div>
+  );
+}
+
+function MemoryPanel() {
+  const [items, setItems] = useState<{ ts: string; image_url: string; ocr?: string }[]>([]);
+  async function refresh() {
+    const j = await fetch("/telemetry/memory/recent").then((r) => r.json());
+    setItems(j);
+  }
+  useEffect(() => {
+    refresh();
+    const id = setInterval(refresh, 5000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+      {items.map((m) => (
+        <div key={m.ts} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}><code>{m.ts}</code></div>
+          <div style={{ width: "100%", aspectRatio: "16 / 9", overflow: "hidden", background: "#000" }}>
+            <img src={m.image_url} alt={m.ts} style={{ width: "100%" }} />
+          </div>
+          {m.ocr && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{ fontSize: 12, color: "#6b7280" }}>OCR</div>
+              <div style={{ fontSize: 12, whiteSpace: "pre-wrap" }}>{m.ocr.slice(0, 400)}</div>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

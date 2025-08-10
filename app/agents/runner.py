@@ -7,6 +7,7 @@ import logging
 import contextlib
 
 from PIL import Image
+from pathlib import Path
 
 from app.config import settings
 from app.services.capture import capture_frame
@@ -254,6 +255,21 @@ class AgentRunner:
                     next_step=action.__class__.__name__,
                     extra=self._stats_extra(),
                 )
+                # Save recent frame snapshot to static/frames with OCR JSON for Memory tab
+                try:
+                    frames_dir = Path("static/frames")
+                    frames_dir.mkdir(parents=True, exist_ok=True)
+                    stamp = int(time.time() * 1000)
+                    img_path = frames_dir / f"frame_{stamp}.png"
+                    image.save(img_path)
+                    import json
+
+                    (frames_dir / f"frame_{stamp}.json").write_text(
+                        json.dumps({"text": state.ocr_text or ""}, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                except Exception:
+                    pass
                 if not settings.dry_run:
                     execute(action)
                     # naive action counters by class name
