@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 from datetime import UTC, datetime
 from typing import Any
 
@@ -17,6 +18,7 @@ class GameState:
     ocr_text: str
     ocr_lines: list[str]
     ocr_tokens: list[str]
+    state_hash: str | None = None
 
 
 def encode_state(image: Image.Image) -> GameState:
@@ -26,6 +28,9 @@ def encode_state(image: Image.Image) -> GameState:
     cur, cap = (None, None)
     if stamina:
         cur, cap = stamina
+    # compute a simple content hash over tokens for caching/replay
+    token_str = "|".join(parsed.tokens).lower()
+    sh = hashlib.sha1(token_str.encode("utf-8")).hexdigest() if token_str else None
     return GameState(
         timestamp_utc=now,
         stamina_current=cur,
@@ -33,6 +38,7 @@ def encode_state(image: Image.Image) -> GameState:
         ocr_text=parsed.raw_text,
         ocr_lines=parsed.lines,
         ocr_tokens=parsed.tokens,
+        state_hash=sh,
     )
 
 
@@ -43,4 +49,11 @@ def to_features(state: GameState) -> dict[str, Any]:
         "stamina_cap": state.stamina_cap,
         "has_stamina": state.stamina_current is not None and state.stamina_cap is not None,
         "ocr_token_count": len(state.ocr_tokens),
+        "state_hash": state.state_hash,
     }
+
+
+def compute_state_hash_from_text(text: str) -> str:
+    tokens = [t for t in text.lower().split() if t]
+    token_str = "|".join(tokens)
+    return hashlib.sha1(token_str.encode("utf-8")).hexdigest()
