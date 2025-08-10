@@ -25,6 +25,7 @@ from app.services.search.web_ingest import fetch_urls, summarize
 from app.memory.store import MemoryStore, Fact
 from app.metrics.registry import compute_metrics
 from app.analytics.metrics import store as metrics_store
+from app.analytics.session import session, Step
 
 
 RunState = Literal["idle", "running", "paused", "stopped"]
@@ -300,6 +301,18 @@ class AgentRunner:
                         ocr_fp=ocr_fp,
                         metrics={},
                     )
+                    # Append to session replay log (reference saved frame path if available)
+                    try:
+                        session.add(
+                            Step(
+                                ts=time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime()),
+                                action=name,
+                                reason=f"{who}:{score:.2f}",
+                                image_path=str(img_path) if 'img_path' in locals() else None,
+                            )
+                        )
+                    except Exception:
+                        pass
                 except Exception:
                     pass
                 consec_errors = 0

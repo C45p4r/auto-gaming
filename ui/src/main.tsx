@@ -178,6 +178,10 @@ function App() {
         </table>
       </section>
       <section>
+        <h2>Session Replay</h2>
+        <SessionReplay />
+      </section>
+      <section>
         <MetricsChart />
       </section>
       <section>
@@ -234,6 +238,43 @@ function MemoryPanel() {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function SessionReplay() {
+  const [rows, setRows] = useState<{ ts: string; action: string; reason: string; image_path?: string | null }[]>([]);
+  async function refresh() {
+    const j = await fetch("/analytics/session").then((r) => r.json());
+    setRows(j);
+  }
+  useEffect(() => {
+    refresh();
+    const id = setInterval(refresh, 5000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Time</th>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Action</th>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Reason</th>
+            <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Frame</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(-100).reverse().map((r, i) => (
+            <tr key={i}>
+              <td style={{ padding: 6 }}><code>{r.ts}</code></td>
+              <td style={{ padding: 6 }}>{r.action}</td>
+              <td style={{ padding: 6 }}>{r.reason}</td>
+              <td style={{ padding: 6 }}>{r.image_path ? <a href={r.image_path} target="_blank">view</a> : "-"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
