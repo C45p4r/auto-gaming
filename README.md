@@ -27,6 +27,7 @@ Status: Beta v1.0.0 (Windows Emulator). Core features implemented; requires furt
 - Judge (Hugging Face): `hf-judge` (enabled via `HF_MODEL_ID_JUDGE`)
 - Safety rules (names): `no-external-navigation`, `no-item-change` (sell/remove/unequip)
 - Stuck recovery: OCR-driven web search + memory enrichment
+  - Windows click safety: set `INPUT_EXCLUDE_BOTTOM_PX` to avoid taskbar/overlay clicks. All taps are clamped to the client area with small margins.
 - Control endpoints: `/telemetry/control/{start|pause|stop}`; WebSocket: `/telemetry/ws`
 - Key env variables: `CAPTURE_BACKEND`, `INPUT_BACKEND`, `WINDOW_TITLE_HINT`, `HF_MODEL_ID_POLICY`, `HF_MODEL_ID_JUDGE`, `HUGGINGFACE_HUB_TOKEN`
 
@@ -486,6 +487,7 @@ Emulator:
   - `WINDOW_TITLE_HINT=Google Play Games|Epic Seven|Epic 7` can be a regex or simple text to match the emulator window title
   - `WINDOW_ENFORCE_TOPMOST=true` keeps the window on top during capture
   - `WINDOW_LEFT=100`, `WINDOW_TOP=100`, `WINDOW_CLIENT_WIDTH=1280`, `WINDOW_CLIENT_HEIGHT=720` set the fixed position and client-area size
+  - `INPUT_EXCLUDE_BOTTOM_PX=40` (optional) keeps taps above the bottom 40px to avoid taskbar overlaps
 - Ensure the emulator window is visible (not minimized) and on any monitor.
 - Usage examples:
   - Capture one frame: `python -m app.cli capture --output-dir captures`
@@ -502,6 +504,7 @@ Safety:
 - Continuous perception: capture screenshots at a configurable interval.
 - OCR: extract on-screen text (menus, missions, resource counters) for state understanding.
 - Web knowledge: periodically query public guides and event info; summarize into durable memories.
+- Observational memory: the agent stores lightweight observations of on-screen OCR text as it explores to build a map of where menu labels lead.
 - Memory: store structured facts (e.g., drop rates, best stage for mats), recent context, and learned strategies.
 - Feedback loop: decisions reference memory; successful outcomes strengthen related memories.
 

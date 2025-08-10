@@ -47,9 +47,16 @@ class TelemetryBus:
                     q.put_nowait(message)
 
     async def publish_status(
-        self, task: str | None, confidence: float | None, next_step: str | None
+        self,
+        task: str | None,
+        confidence: float | None,
+        next_step: str | None,
+        extra: dict[str, Any] | None = None,
     ) -> None:
-        self._status = {"task": task, "confidence": confidence, "next": next_step}
+        base = {"task": task, "confidence": confidence, "next": next_step}
+        if extra:
+            base.update(extra)
+        self._status = base
         await self._broadcast({"type": "status", "data": self._status})
 
     async def publish_decision(

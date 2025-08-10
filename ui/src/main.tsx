@@ -2,10 +2,23 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MetricsChart } from "./components/Charts";
 import { createRoot } from "react-dom/client";
 
-type TelemetryMsg = { type: "status"; data: { task: string | null; confidence: number | null; next: string | null } } | { type: "decision"; data: any } | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } };
+type StatusPayload = {
+  agent_state?: string | null;
+  task: string | null;
+  confidence: number | null;
+  next: string | null;
+  fps?: number;
+  actions?: number;
+  taps?: number;
+  swipes?: number;
+  backs?: number;
+  blocks?: number;
+  stuck_events?: number;
+};
+type TelemetryMsg = { type: "status"; data: StatusPayload } | { type: "decision"; data: any } | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } };
 
 function App() {
-  const [status, setStatus] = useState<{ agent_state?: string | null; task: string | null; confidence: number | null; next: string | null }>({ agent_state: null, task: null, confidence: null, next: null });
+  const [status, setStatus] = useState<StatusPayload>({ agent_state: null, task: null, confidence: null, next: null });
   const [log, setLog] = useState<string[]>([]);
   const [decisions, setDecisions] = useState<any[]>([]);
   const [guidance, setGuidance] = useState<{ prioritize: string[]; avoid: string[] }>({ prioritize: [], avoid: [] });
@@ -55,6 +68,18 @@ function App() {
         <div>Next: {status.next ?? "-"}</div>
       </section>
       <section>
+        <h2>Performance</h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+          <Stat label="FPS" value={status.fps !== undefined ? status.fps.toFixed(2) : "-"} />
+          <Stat label="Actions" value={status.actions ?? 0} />
+          <Stat label="Taps" value={status.taps ?? 0} />
+          <Stat label="Swipes" value={status.swipes ?? 0} />
+          <Stat label="Backs" value={status.backs ?? 0} />
+          <Stat label="Blocks" value={status.blocks ?? 0} />
+          <Stat label="Stuck" value={status.stuck_events ?? 0} />
+        </div>
+      </section>
+      <section>
         <h2>Client Logs</h2>
         <div style={{ maxHeight: 180, overflow: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12 }}>
           {log.map((line, i) => (
@@ -85,3 +110,12 @@ function App() {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+function Stat(props: { label: string; value: string | number }) {
+  return (
+    <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
+      <div style={{ color: "#6b7280", fontSize: 12 }}>{props.label}</div>
+      <div style={{ fontSize: 18, fontWeight: 600 }}>{props.value}</div>
+    </div>
+  );
+}
