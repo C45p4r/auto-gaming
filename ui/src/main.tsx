@@ -20,11 +20,7 @@ type StatusPayload = {
   model_policy?: string;
   model_id_policy?: string;
 };
-type TelemetryMsg =
-  | { type: "status"; data: StatusPayload }
-  | { type: "decision"; data: any }
-  | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } }
-  | { type: "step"; data: { timestamp_utc: string; kind: string; payload: any } };
+type TelemetryMsg = { type: "status"; data: StatusPayload } | { type: "decision"; data: any } | { type: "guidance"; data: { prioritize: string[]; avoid: string[] } } | { type: "step"; data: { timestamp_utc: string; kind: string; payload: any } };
 
 function App() {
   const [status, setStatus] = useState<StatusPayload>({ agent_state: null, task: null, confidence: null, next: null });
@@ -217,10 +213,18 @@ function MemoryPanel() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
       {items.map((m) => (
-        <div key={m.ts} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
-          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}><code>{m.ts}</code></div>
+        <div
+          key={m.ts}
+          style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
+          <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>
+            <code>{m.ts}</code>
+          </div>
           <div style={{ width: "100%", aspectRatio: "16 / 9", overflow: "hidden", background: "#000" }}>
-            <img src={m.image_url} alt={m.ts} style={{ width: "100%" }} />
+            <img
+              src={m.image_url}
+              alt={m.ts}
+              style={{ width: "100%" }}
+            />
           </div>
           {m.ocr && (
             <div style={{ marginTop: 6 }}>
