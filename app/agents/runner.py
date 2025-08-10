@@ -19,6 +19,7 @@ from app.services.capture.window_manage import (
 from app.state.encoder import encode_state
 from app.agents.orchestrator import orchestrate
 from app.actions.executor import execute
+from app.actions.types import BackAction, WaitAction, SwipeAction
 from app.telemetry.bus import bus
 from app.safety.guards import detect_external_navigation_text, detect_item_change_text
 from app.services.search.web_ingest import fetch_urls, summarize
@@ -60,6 +61,10 @@ class AgentRunner:
         self._cache = DecisionCache()
         self._mem_store = MemoryStore()
         self._last_frame_save_ts: float = 0.0
+        self._last_state_hash: str | None = None
+        self._last_action_name: str | None = None
+        self._repeat_action_count: int = 0
+        self._recovery_runs: int = 0
 
     def get_state(self) -> RunState:
         return self._state
@@ -337,6 +342,37 @@ class AgentRunner:
                 except Exception:
                     pass
                 consec_errors = 0
+                # Backup/retry mechanic on repeated identical state+action
+                try:
+                    current_hash = getattr(state, "state_hash", None)
+                    current_action = name
+                    if current_hash and self._last_state_hash == current_hash and self._last_action_name == current_action:
+                        self._repeat_action_count += 1
+                    else:
+                        self._repeat_action_count = 0
+                    self._last_state_hash = current_hash
+                    self._last_action_name = current_action
+                    if self._repeat_action_count >= 2:
+                        await bus.publish_step("backup:start", {"state_hash": current_hash, "action": current_action, "count": self._repeat_action_count})
+                        if not settings.dry_run:
+                            execute(WaitAction(seconds=0.6))
+                            execute(BackAction())
+                            base_w = max(1, int(settings.input_base_width))
+                            base_h = max(1, int(settings.input_base_height))
+                            x = int(base_w * 0.5)
+                            y1 = int(base_h * 0.70)
+                            y2 = int(base_h * 0.35)
+                            execute(SwipeAction(x1=x, y1=y1, x2=x, y2=y2, duration_ms=300))
+                            execute(WaitAction(seconds=0.4))
+                        self._recovery_runs += 1
+                        try:
+                            metrics_store.add_point("recovery_runs", float(self._recovery_runs))
+                        except Exception:
+                            pass
+                        await bus.publish_step("backup:end", {"recovery_runs": self._recovery_runs})
+                        self._repeat_action_count = 0
+                except Exception:
+                    pass
             except Exception as exc:
                 logger.exception("runner_loop_error")
                 consec_errors += 1
