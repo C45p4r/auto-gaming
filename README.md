@@ -293,6 +293,31 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
 - [ ] Comprehensive docs and troubleshooting; one‑click Windows setup
 - [ ] Test suite green: unit, golden OCR, integration, telemetry assertions
 
+#### v2.0.1 — v2.1.0 UI/UX improvements (10 updates)
+
+- v2.0.1
+  - [ ] Collapsible panels and layout presets (compact, detailed)
+  - [ ] Decision table filters (agent, type, latency range, errors only)
+  - [ ] Sticky mini heads-up strip (FPS, actions/s, blocks, stuck, model)
+  - [ ] One-click actions: Back, Wait(1s), Gentle Swipe (operator shortcuts)
+  - [ ] Memory thumbnails with inline expand and copy-to-clipboard OCR
+
+- v2.0.2
+  - [ ] Session replay scrubber (time slider) with frame previews
+  - [ ] Export session trace (JSONL) and frames; Import for replay
+  - [ ] Metrics compare view (last 5 sessions) with deltas
+
+- v2.0.3
+  - [ ] Guidance editor (prioritize/avoid templates, presets)
+  - [ ] Doctor panel enhancements (quick fixes, open config, re-run with logs)
+
+- v2.1.0
+  - [ ] Theming (dark/light/system) and accessibility (font size, high contrast)
+  - [ ] Status toasts and inline error chips (e.g., OCR/decision errors)
+  - [ ] Keyboard shortcuts (Start/Pause/Stop, Refresh, Focus panes)
+  - [ ] Screenshot annotate mode (draw box and copy coords as base-space)
+  - [ ] Model indicator with quick toggle (heuristic/hf-policy) and last error
+
 Definition of Done per version:
 
 - Major features and all listed checkboxes are completed and tested
