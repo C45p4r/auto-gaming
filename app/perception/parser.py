@@ -13,12 +13,16 @@ from app.services.ocr.tesseract_adapter import run_ocr
 class ParsedText:
     raw_text: str
     lines: list[str]
+    tokens: list[str]
 
 
 def ocr_lines(image: Image.Image) -> ParsedText:
     text = run_ocr(image)
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-    return ParsedText(raw_text=text, lines=lines)
+    tokens: list[str] = []
+    for ln in lines:
+        tokens.extend([t for t in re.split(r"\W+", ln) if t])
+    return ParsedText(raw_text=text, lines=lines, tokens=tokens)
 
 
 STAMINA_PATTERNS: list[re.Pattern[str]] = [

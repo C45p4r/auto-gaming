@@ -16,6 +16,8 @@ def test_encode_state_with_stamina_parses_numbers() -> None:
     state = encode_state(img)
     assert state.stamina_current == 50
     assert state.stamina_cap == 120
+    assert isinstance(state.ocr_lines, list) and state.ocr_lines
+    assert isinstance(state.ocr_tokens, list) and state.ocr_tokens
 
 
 def test_compute_and_score_metrics() -> None:

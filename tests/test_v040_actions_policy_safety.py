@@ -14,13 +14,13 @@ def test_action_types_construction() -> None:
 
 
 def test_heuristic_policy_wait_on_low_stamina() -> None:
-    state = GameState(timestamp_utc="t", stamina_current=5, stamina_cap=100, ocr_text="")
+    state = GameState(timestamp_utc="t", stamina_current=5, stamina_cap=100, ocr_text="", ocr_lines=[], ocr_tokens=[])
     score, action = propose_action(state)
     assert isinstance(action, WaitAction)
 
 
 def test_heuristic_policy_tap_otherwise() -> None:
-    state = GameState(timestamp_utc="t", stamina_current=50, stamina_cap=100, ocr_text="")
+    state = GameState(timestamp_utc="t", stamina_current=50, stamina_cap=100, ocr_text="", ocr_lines=[], ocr_tokens=[])
     score, action = propose_action(state)
     assert isinstance(action, TapAction)
 

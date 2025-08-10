@@ -15,6 +15,8 @@ class GameState:
     stamina_current: int | None
     stamina_cap: int | None
     ocr_text: str
+    ocr_lines: list[str]
+    ocr_tokens: list[str]
 
 
 def encode_state(image: Image.Image) -> GameState:
@@ -29,6 +31,8 @@ def encode_state(image: Image.Image) -> GameState:
         stamina_current=cur,
         stamina_cap=cap,
         ocr_text=parsed.raw_text,
+        ocr_lines=parsed.lines,
+        ocr_tokens=parsed.tokens,
     )
 
 
@@ -38,4 +42,5 @@ def to_features(state: GameState) -> dict[str, Any]:
         "stamina_current": state.stamina_current,
         "stamina_cap": state.stamina_cap,
         "has_stamina": state.stamina_current is not None and state.stamina_cap is not None,
+        "ocr_token_count": len(state.ocr_tokens),
     }
