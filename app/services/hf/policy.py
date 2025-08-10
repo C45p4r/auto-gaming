@@ -108,14 +108,18 @@ class HFPolicy:
         self._ensure_backend()
         prompt = self._build_prompt(state)
         raw: Optional[str] = None
-        if self._client is not None:
-            # Hosted
-            raw = self._client.text_generation(prompt=prompt, max_new_tokens=128, temperature=0.2)  # type: ignore[no-untyped-call]
-        elif self._pipeline is not None:
-            out = self._pipeline(prompt, max_new_tokens=128, do_sample=False)  # type: ignore[no-untyped-call]
-            raw = str(out[0]["generated_text"]) if out else None
-        else:
-            raise RuntimeError("No HF backend available")
+        try:
+            if self._client is not None:
+                # Hosted
+                raw = self._client.text_generation(prompt=prompt, max_new_tokens=128, temperature=0.2)  # type: ignore[no-untyped-call]
+            elif self._pipeline is not None:
+                out = self._pipeline(prompt, max_new_tokens=128, do_sample=False)  # type: ignore[no-untyped-call]
+                raw = str(out[0]["generated_text"]) if out else None
+            else:
+                raise RuntimeError("No HF backend available")
+        except Exception as e:
+            # Surface a structured error for evaluation harness; caller will fallback
+            raise RuntimeError(f"HF policy generation failed: {e}")
 
         if not raw:
             raise RuntimeError("Empty response from HF backend")
