@@ -25,6 +25,7 @@ class Guidance:
     prioritize: list[str] = field(default_factory=list)
     avoid: list[str] = field(default_factory=list)
     suggestions: list[str] = field(default_factory=list)
+    goals: list[dict] = field(default_factory=list)
 
 
 class TelemetryBus:
@@ -32,7 +33,16 @@ class TelemetryBus:
         self._subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
         self._status: dict[str, Any] = {"task": None, "confidence": None, "next": None}
         self._decision_log: list[DecisionLogEntry] = []
-        self._guidance: Guidance = Guidance()
+        self._guidance: Guidance = Guidance(
+            goals=[
+                {"name": "Complete daily quests", "approved": True},
+                {"name": "Maximize resources (stamina, gold)", "approved": True},
+                {"name": "Unlock/upgrade characters", "approved": True},
+                {"name": "Obtain strong equipment", "approved": True},
+                {"name": "Arena progress", "approved": False},
+                {"name": "Event participation", "approved": True},
+            ]
+        )
         self._lock = asyncio.Lock()
         self._help_prompt: str | None = None
 
@@ -130,6 +140,31 @@ class TelemetryBus:
         # keep last 20 suggestions
         self._guidance.suggestions.append(t)
         self._guidance.suggestions = self._guidance.suggestions[-20:]
+        await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
+
+    async def set_goals(self, goals: list[dict]) -> None:
+        # Sanitize: expect items with name and approved
+        cleaned: list[dict] = []
+        for g in goals:
+            name = str(g.get("name", "")).strip()
+            if not name:
+                continue
+            cleaned.append({"name": name, "approved": bool(g.get("approved", True))})
+        self._guidance.goals = cleaned
+        await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
+
+    async def approve_goal(self, name: str, approved: bool) -> None:
+        name = name.strip()
+        if not name:
+            return
+        found = False
+        for g in self._guidance.goals:
+            if str(g.get("name", "")).strip().lower() == name.lower():
+                g["approved"] = bool(approved)
+                found = True
+                break
+        if not found:
+            self._guidance.goals.append({"name": name, "approved": bool(approved)})
         await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
 
 

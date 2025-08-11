@@ -234,6 +234,10 @@ function App() {
         />
       </section>
       <section className="card">
+        <h2>Goals</h2>
+        <GoalsPanel goals={(guidance as any).goals || []} />
+      </section>
+      <section className="card">
         <h2>Suggestions</h2>
         <SuggestionBox suggestions={((guidance as any).suggestions as string[]) || []} />
       </section>
@@ -636,6 +640,32 @@ function SuggestionBox({ suggestions }: { suggestions: string[] }) {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function GoalsPanel({ goals }: { goals: { name: string; approved?: boolean }[] }) {
+  const [items, setItems] = useState<{ name: string; approved: boolean }[]>(goals.map((g) => ({ name: g.name, approved: !!g.approved })));
+  useEffect(() => {
+    setItems(goals.map((g) => ({ name: g.name, approved: !!g.approved })));
+  }, [goals]);
+  async function saveAll() {
+    await fetch("/telemetry/guidance/goals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ goals: items }) });
+  }
+  return (
+    <div>
+      <ul>
+        {items.map((g, i) => (
+          <li key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <input type="checkbox" checked={g.approved} onChange={(e) => setItems((arr) => arr.map((x, idx) => (idx === i ? { ...x, approved: e.target.checked } : x)))} />
+            <input value={g.name} onChange={(e) => setItems((arr) => arr.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))} style={{ flex: 1 }} />
+          </li>
+        ))}
+      </ul>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => setItems((arr) => [...arr, { name: "", approved: true }])}>Add Goal</button>
+        <button onClick={saveAll}>Save</button>
+      </div>
     </div>
   );
 }

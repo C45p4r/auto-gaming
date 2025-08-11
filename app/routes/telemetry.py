@@ -178,6 +178,23 @@ async def post_suggestion(payload: dict[str, Any] = Body(...)) -> dict[str, Any]
     return {"ok": True, "count": len(g.suggestions)}
 
 
+@router.post("/guidance/goals")
+async def post_goals(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    goals = payload.get("goals", [])
+    if not isinstance(goals, list):
+        goals = []
+    await bus.set_goals(goals)
+    return {"ok": True}
+
+
+@router.post("/guidance/goals/approve")
+async def post_goal_approve(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    name = str(payload.get("name", ""))
+    approved = bool(payload.get("approved", True))
+    await bus.approve_goal(name, approved)
+    return {"ok": True}
+
+
 @router.get("/window/rect")
 async def window_rect() -> dict[str, int]:
     """Return current emulator client-area rectangle in screen coordinates."""
