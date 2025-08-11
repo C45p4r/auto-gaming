@@ -1,6 +1,19 @@
 # auto-gaming
 
-Status: Beta v1.0.2 (Windows Emulator). OCR ensemble enabled; RL exploration more aggressive and diversity-aware; still memory-first with locked-feature learning.
+Status: Stable Beta v1.0.2 (Windows Emulator). OCR ensemble, aggressive RL exploration, clickmap learning, and improved logging/telemetry; memory-first with locked-feature learning.
+
+## Release notes
+
+- v1.0.2
+  - OCR ensemble (Tesseract + Paddle) with configurable engines
+  - More aggressive RL exploration (visible-label bandit + stuck boost)
+  - Clickmap learning of likely buttons vs static regions; policy boosts button-like areas
+  - Logging overhaul: JSON rotating logs, WS mirroring, `/telemetry/logs` endpoint
+- v1.0.1
+  - Memory-first policy integration and locked-feature learning persistence
+  - UI improvements (Goals/Suggestions persistence, scrollable logs)
+- v1.0.0
+  - Windows emulator beta, end-to-end loop, safety guards, docs and setup
 
 ## Vision
 
@@ -47,11 +60,18 @@ Status: Beta v1.0.2 (Windows Emulator). OCR ensemble enabled; RL exploration mor
 - Add safety guards to block IAP/payment flows and risky navigation.
 - Decide on tooling (Python 3.11+, packaging, testing, linting, CI) and UI stack.
 
-## Versioned roadmap and TODOs
+## Roadmap
+
+### Roadmap overview
+
+- Completed: v0.1.0 → v2.0.0 (foundations, perception, UI, safety, analytics, reliability, Windows beta)
+- Upcoming: v2.1.0 → v3.0.0 (throughput, perception batching, retrieval performance, policy speedups, offline RL/BC, curriculum, detection, CI polish)
 
 Version numbers mark grouped milestones. Minor features that compose a major capability are listed as checkboxes to track progress.
 
-### v0.1.0 — Foundations (repo, configs, capture + OCR)
+### Completed roadmap (v0.1.0 → v2.0.0)
+
+#### v0.1.0 — Foundations (repo, configs, capture + OCR)
 
 - [x] Git + CI skeleton (lint, format, type-check)
 - [x] Config system with `.env` and typed settings
@@ -69,7 +89,7 @@ Quickstart (v0.1.0):
 - Capture one frame with OCR: `python -m app.cli capture --output-dir captures`
 - Capture loop at 1 FPS with OCR: `python -m app.cli capture-loop --fps 1 --ocr --count 5`
 
-### v0.2.0 — State encoder and metrics
+#### v0.2.0 — State encoder and metrics
 
 - [x] Parse common UI elements (buttons, counters, mission text)
 - [x] State encoder: normalized features and timestamps
@@ -88,7 +108,7 @@ Usage:
   - `metrics = compute_metrics(state)`
   - `score = score_metrics(metrics)`
 
-### v0.3.0 — Memory and web knowledge
+#### v0.3.0 — Memory and web knowledge
 
 - [x] Web search ingestion (guides/events) with rate limits
 - [x] Summarization into structured facts (title, source, claims)
@@ -107,7 +127,7 @@ Usage:
 - Retrieve relevant facts by query:
   - `store.search("best farming stage for mats")`
 
-### v0.4.0 — Planner v1 and action executor
+#### v0.4.0 — Planner v1 and action executor
 
 - [x] Heuristic policy using metrics + memory signals
 - [x] Action schema (tap, swipe, wait, back)
@@ -121,7 +141,7 @@ Usage:
 - Execute: `from app.actions.executor import execute, escape_sequence`
 - Safety checks: `from app.safety.guards import detect_purchase_ui, screen_change`
 
-### v0.5.0 — UI Alpha
+#### v0.5.0 — UI Alpha
 
 - [x] WebSocket telemetry stream
 - [x] Status panel (current task, confidence, next step)
@@ -142,7 +162,7 @@ Controls:
   - `POST /telemetry/control/pause`
   - `POST /telemetry/control/stop`
 
-### v0.6.0 — Safety and non‑monetization hardening
+#### v0.6.0 — Safety and non‑monetization hardening
 
 - [x] Purchase UI detection templates and OCR keywords
 - [x] Hard block on IAP flows; auto‑dismiss dialogs
@@ -155,7 +175,7 @@ Config:
 - `RISK_QUARANTINE=true` and `RISK_SCORE_THRESHOLD=0.5` — quarantine high‑risk states
 - Templates in `app/safety/templates/keywords.txt` (extendable)
 
-### v0.7.0 — Parallelism and multi‑agent
+#### v0.7.0 — Parallelism and multi‑agent
 
 - [x] Orchestrator (async/Ray) with time‑boxed tasks
 - [x] Specialist agents (policy‑lite, guide‑reader, mechanics‑expert)
@@ -167,7 +187,7 @@ Config:
 
 - `MAX_AGENTS=3`, `AGENT_TIMEOUT_S=1.5`, `DEBATE_ROUNDS=1`, `PARALLEL_MODE=async|ray`
 
-### v0.8.0 — Epic7 presets and loops
+#### v0.8.0 — Epic7 presets and loops
 
 - [x] Resolution/DPI presets and UI anchors for Epic7
 - [x] Daily mission flow (end‑to‑end)
@@ -178,7 +198,7 @@ Usage:
 
 - `from app.games.epic7.loops import run_daily_missions` then call `run_daily_missions(max_steps=5)`
 
-### v0.9.0 — Telemetry and analytics
+#### v0.9.0 — Telemetry and analytics
 
 - [x] Metrics dashboard (graphs, trends)
 - [x] Session replay: step through screenshots, actions, decisions (basic via API)
@@ -189,7 +209,7 @@ Usage:
 - Backend API: `/analytics/metrics` and `/analytics/session`
 - UI: metrics panel in the dev UI (auto-refresh)
 
-### v1.0.0 — Beta release (Windows emulator)
+#### v1.0.0 — Beta release (Windows emulator)
 
 - [x] End‑to‑end stability pass and error backoff thresholds
 - [x] Documentation (Windows setup, safety, UI controls, configs)
@@ -246,7 +266,7 @@ Definition of done (per item):
 - Safety maintained (no IAP/external navigation; item change blocked)
 - Docs updated (README, config, UI screenshots)
 
-### Post‑1.0 plan to v2.0 — Tests, fixes, and full functionality
+### Post‑1.0 plan to v2.0 — Tests, fixes, and full functionality (Completed)
 
 The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional v2.0.0. Each minor version focuses on stabilizing core subsystems with measurable tests.
 
@@ -322,6 +342,8 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
 - [x] Artifact uploads: sample frames, OCR JSON, coverage reports
 
 #### v2.0.0 — Full Windows emulator functionality
+
+### Upcoming roadmap (v2.1.0 → v3.0.0)
 
 - [x] Stable capture/input across common DPIs and window states
 - [x] Robust exploration: avoids repeats; progresses through core menus
