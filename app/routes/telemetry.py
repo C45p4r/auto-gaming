@@ -170,6 +170,14 @@ async def post_help_prompt(payload: dict[str, Any] = Body(...)) -> dict[str, str
     return {"help_prompt": bus.get_help_prompt()}
 
 
+@router.post("/guidance/suggest")
+async def post_suggestion(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    text = str(payload.get("text", ""))
+    await bus.add_suggestion(text)
+    g = bus.get_guidance()
+    return {"ok": True, "count": len(g.suggestions)}
+
+
 @router.get("/window/rect")
 async def window_rect() -> dict[str, int]:
     """Return current emulator client-area rectangle in screen coordinates."""

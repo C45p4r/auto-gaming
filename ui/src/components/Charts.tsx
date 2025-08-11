@@ -83,7 +83,12 @@ function MiniChart({ name, points }: { name: string; points: Point[] }) {
       </div>
       <div className="bars">
         {points.slice(-80).map((p, i) => (
-          <div key={i} className="bar" title={`${p.ts}: ${p.value}`} style={{ height: Math.max(2, p.value * 10) }} />
+          <div
+            key={i}
+            className="bar"
+            title={`${p.ts}: ${p.value}`}
+            style={{ height: Math.max(2, p.value * 10) }}
+          />
         ))}
       </div>
     </div>

@@ -24,6 +24,7 @@ class DecisionLogEntry:
 class Guidance:
     prioritize: list[str] = field(default_factory=list)
     avoid: list[str] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)
 
 
 class TelemetryBus:
@@ -121,6 +122,15 @@ class TelemetryBus:
 
     def get_help_prompt(self) -> str | None:
         return self._help_prompt
+
+    async def add_suggestion(self, text: str) -> None:
+        t = (text or "").strip()
+        if not t:
+            return
+        # keep last 20 suggestions
+        self._guidance.suggestions.append(t)
+        self._guidance.suggestions = self._guidance.suggestions[-20:]
+        await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
 
 
 bus = TelemetryBus()

@@ -234,6 +234,10 @@ function App() {
         />
       </section>
       <section className="card">
+        <h2>Suggestions</h2>
+        <SuggestionBox suggestions={((guidance as any).suggestions as string[]) || []} />
+      </section>
+      <section className="card">
         <h2>Decisions</h2>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -596,6 +600,34 @@ function GuidanceEditor({ current, onSaved }: { current: { prioritize: string[];
   );
 }
 
+function SuggestionBox({ suggestions }: { suggestions: string[] }) {
+  const [text, setText] = useState("");
+  async function submit() {
+    const t = text.trim();
+    if (!t) return;
+    await fetch("/telemetry/guidance/suggest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: t }) });
+    setText("");
+  }
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Suggest goals, strategies, or hints (won't pause the agent)" style={{ flex: 1, height: 60 }} />
+        <button onClick={submit}>Submit</button>
+      </div>
+      {suggestions && suggestions.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 12, color: "#6b7280" }}>Recent Suggestions</div>
+          <ul>
+            {[...suggestions].slice(-10).reverse().map((s, i) => (
+              <li key={i} style={{ fontSize: 12 }}>{s}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HelpPromptBox({ current }: { current: string }) {
   const [text, setText] = useState<string>(current || "");
   async function save() {
@@ -604,7 +636,12 @@ function HelpPromptBox({ current }: { current: string }) {
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{ fontWeight: 600 }}>Need help? Describe the screen/problem:</div>
-      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g., I am at battle menu, how to proceed?" style={{ width: "100%", height: 60 }} />
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="e.g., I am at battle menu, how to proceed?"
+        style={{ width: "100%", height: 60 }}
+      />
       <div>
         <button onClick={save}>Submit</button>
       </div>
