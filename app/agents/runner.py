@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from typing import Literal, Optional
+from collections import deque
 import logging
 import contextlib
 
@@ -78,6 +79,7 @@ class AgentRunner:
         ])
         self._prev_metric_snapshot: dict[str, float] | None = None
         self._step_counter: int = 0
+        self._recent_actions: deque[str] = deque(maxlen=6)
 
     def get_state(self) -> RunState:
         return self._state
@@ -313,6 +315,44 @@ class AgentRunner:
                         score = max(0.0, float(score) * 0.9)
                 except Exception:
                     pass
+                # Recovery: if screen unchanged and recent actions are only Wait/Back, force exploratory Tap away from current label
+                try:
+                    if self._unchanged_count >= 4 and len(self._recent_actions) >= 4:
+                        recent4 = list(self._recent_actions)[-4:]
+                        if all(a in {"WaitAction", "BackAction"} for a in recent4):
+                            # Prefer a non-locked, non-labyrinth UI button if visible
+                            tap_x = None
+                            tap_y = None
+                            if getattr(state, "ui_buttons", None) and state.img_width and state.img_height:
+                                try:
+                                    from app.state.profile import is_mode_locked
+                                    candidates = [
+                                        b for b in state.ui_buttons
+                                        if getattr(b, "label", None) and str(b.label).lower() != "labyrinth" and not is_mode_locked(str(b.label))
+                                    ]
+                                except Exception:
+                                    candidates = [
+                                        b for b in state.ui_buttons
+                                        if getattr(b, "label", None) and str(b.label).lower() != "labyrinth"
+                                    ]
+                                if candidates:
+                                    b = candidates[0]
+                                    ix = int(b.x + b.w // 2)
+                                    iy = int(b.y + b.h // 2)
+                                    tap_x = int(ix / max(1, state.img_width) * int(settings.input_base_width))
+                                    tap_y = int(iy / max(1, state.img_height) * int(settings.input_base_height))
+                            if tap_x is None or tap_y is None:
+                                # Fall back to clickmap low-trial points
+                                pts = suggest_explore_points(k=5)
+                                if pts:
+                                    tap_x, tap_y = pts[0]
+                            if tap_x is not None and tap_y is not None:
+                                from app.actions.types import TapAction as _Tap
+                                action = _Tap(x=int(tap_x), y=int(tap_y))
+                                who = f"{who}+recovery-explore"
+                                score = max(0.0, float(score) * 0.9)
+                except Exception:
+                    pass
                 await bus.publish_step("policy", {"who": who, "score": score, "action": action.__class__.__name__})
                 await bus.publish_status(
                     task=f"{who} proposing action",
@@ -379,6 +419,7 @@ class AgentRunner:
                     execute(action)
                     # naive action counters by class name
                     name = action.__class__.__name__
+                    self._recent_actions.append(name)
                     self._actions += 1
                     if name == "TapAction":
                         self._taps += 1
