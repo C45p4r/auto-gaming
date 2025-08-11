@@ -29,6 +29,9 @@ function App() {
   const [steps, setSteps] = useState<{ timestamp_utc: string; kind: string; payload: any }[]>([]);
   const [guidance, setGuidance] = useState<{ prioritize: string[]; avoid: string[] }>({ prioritize: [], avoid: [] });
   const [hfEnabled, setHfEnabled] = useState<boolean>(true);
+  const [theme, setTheme] = useState<string>(() => {
+    try { return localStorage.getItem("ui_theme") || "light"; } catch { return "light"; }
+  });
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -44,6 +47,37 @@ function App() {
     };
     wsRef.current = ws;
     return () => ws.close();
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem("ui_theme", theme); } catch {}
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.style.backgroundColor = "#0f172a";
+      root.style.color = "#e5e7eb";
+    } else if (theme === "light") {
+      root.style.backgroundColor = "#ffffff";
+      root.style.color = "#111827";
+    } else {
+      root.style.backgroundColor = "";
+      root.style.color = "";
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.target as HTMLElement)?.tagName === "INPUT") return;
+      const k = e.key.toLowerCase();
+      if (k === "s") fetch("/telemetry/control/start", { method: "POST" });
+      if (k === "p") fetch("/telemetry/control/pause", { method: "POST" });
+      if (k === "x") fetch("/telemetry/control/stop", { method: "POST" });
+      if (k === "b") fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) });
+      if (k === "w") fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) });
+      if (k === "g") fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) });
+      if (k === "t") setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   return (
@@ -66,6 +100,17 @@ function App() {
             style={{ padding: "6px 12px", background: "#ef4444", color: "#fff", borderRadius: 6, border: 0 }}>
             Stop
           </button>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+            <label>
+              Theme
+              <select value={theme} onChange={(e) => setTheme(e.target.value)} style={{ marginLeft: 6 }}>
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">System</option>
+              </select>
+            </label>
+            <span style={{ fontSize: 12, color: "#6b7280" }}>(Shortcuts: S start, P pause, X stop, B back, W wait, G gentle swipe, T theme)</span>
+          </div>
         </div>
       </section>
       <section>
@@ -90,10 +135,14 @@ function App() {
           <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) })}>Wait 1s</button>
           <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) })}>Swipe gentle</button>
           <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <input type="checkbox" checked={hfEnabled} onChange={async (e) => {
-              setHfEnabled(e.target.checked);
-              await fetch("/telemetry/control/model/policy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
-            }} />
+            <input
+              type="checkbox"
+              checked={hfEnabled}
+              onChange={async (e) => {
+                setHfEnabled(e.target.checked);
+                await fetch("/telemetry/control/model/policy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
+              }}
+            />
             hf-policy enabled
           </label>
         </div>
