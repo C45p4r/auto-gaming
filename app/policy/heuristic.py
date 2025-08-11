@@ -15,6 +15,23 @@ _repeat_count: int = 0
 _label_cooldown: dict[str, int] = {}
 # Rotate through matched targets to avoid hammering a single spot
 _last_choice_idx: int = -1
+# Track last selected label to correlate lock popups
+_last_selected_label: str | None = None
+
+# Common lock popup cues
+_LOCK_CUES: tuple[str, ...] = (
+    "rookie arena",
+    "unlock after",
+    "unlocked after",
+    "will be available",
+    "will be open",
+    "available after",
+    "requires completion",
+    "clear chapter",
+    "clear stage",
+    "locked",
+    "touch anywhere",
+)
 
 # Normalized targets (xFrac, yFrac) for common Epic 7 lobby menu items
 _TARGETS = [
@@ -116,6 +133,15 @@ def propose_action(state: GameState) -> tuple[float, object]:
             return score, SwipeAction(x1=x, y1=y1, x2=x, y2=y2, duration_ms=320)
         return score, WaitAction(seconds=0.5)
 
+    # If a lock popup is on screen, mark last selected label as locked and set a long cooldown
+    if any(cue in text_lower for cue in _LOCK_CUES):
+        try:
+            if _last_selected_label:
+                set_mode_locked(_last_selected_label, True)
+                _label_cooldown[_last_selected_label] = max(_label_cooldown.get(_last_selected_label, 0), 300)
+        except Exception:
+            pass
+
     # OCR-guided targeting: choose visible menu items and rotate among them
     text = (state.ocr_text or "").lower()
     # If we see locked cues, record lock for 'arena' and apply a long cooldown to avoid re-targeting
@@ -138,7 +164,7 @@ def propose_action(state: GameState) -> tuple[float, object]:
     if not matched and getattr(state, "ui_buttons", None):
         # Prefer known buttons that are not locked
         for b in state.ui_buttons:
-            if b.label == "arena" and is_mode_locked("arena"):
+            if b.label and is_mode_locked(b.label):
                 continue
             # map button center to base coords using image dimensions
             if state.img_width and state.img_height:
@@ -148,6 +174,8 @@ def propose_action(state: GameState) -> tuple[float, object]:
                 cy = b.y + b.h // 2
                 x = int(cx / state.img_width * base_w)
                 y = int(cy / state.img_height * base_h)
+                global _last_selected_label
+                _last_selected_label = b.label
                 return score, TapAction(x=x, y=y)
     if matched:
         # Filter out labels on cooldown
@@ -172,6 +200,8 @@ def propose_action(state: GameState) -> tuple[float, object]:
         # Decay existing cooldowns
         for k in list(_label_cooldown.keys()):
             _label_cooldown[k] = max(0, _label_cooldown[k] - 1)
+        global _last_selected_label
+        _last_selected_label = name
         return score, TapAction(x=x, y=y)
 
     # Simple heuristic: if stamina exists and is low percentage, wait; else tap near center to advance
