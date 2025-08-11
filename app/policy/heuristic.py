@@ -58,15 +58,21 @@ def _infer_label_from_text(text_lower: str) -> str | None:
 _TARGETS = [
     ("episode", 0.80, 0.30),
     ("side story", 0.82, 0.35),
+    ("substory", 0.82, 0.35),  # Alternative spelling
     ("battle", 0.83, 0.45),
     ("arena", 0.84, 0.55),
     ("summon", 0.84, 0.65),
     ("shop", 0.86, 0.75),
     ("sanctuary", 0.12, 0.28),
     ("secret shop", 0.14, 0.42),
+    ("secret", 0.14, 0.42),  # Partial match
     ("epic pass", 0.14, 0.52),
+    ("epic", 0.14, 0.52),  # Partial match
     ("event", 0.14, 0.62),
     ("epic dash", 0.16, 0.72),
+    ("dash", 0.16, 0.72),  # Partial match
+    ("moonlight", 0.50, 0.85),  # Moonlight's Blessing
+    ("blessing", 0.50, 0.85),  # Moonlight's Blessing
 ]
 
 
@@ -177,15 +183,42 @@ def propose_action(state: GameState) -> tuple[float, object]:
         except Exception:
             pass
         _label_cooldown["arena"] = max(_label_cooldown.get("arena", 0), 50)
-    # quick path: if tokens available, build a set for O(1) contains
+    
+    # Enhanced text matching: be more flexible with OCR noise
     token_set = set((state.ocr_tokens or []))
     matched: list[tuple[str, float, float]] = []
+    
     for name, xf, yf in _TARGETS:
-        if (name in text) or (name in token_set):
-            # Skip arena if on long cooldown or persisted as locked
-            if name == "arena" and (_label_cooldown.get("arena", 0) > 0 or is_mode_locked("arena")):
-                continue
+        # Try exact matches first
+        if name in text or name in token_set:
             matched.append((name, xf, yf))
+            continue
+        
+        # Try partial matches for longer names
+        if len(name) > 3:
+            name_parts = name.split()
+            if len(name_parts) > 1:
+                # Check if any part of the name is in the text
+                if any(part in text for part in name_parts if len(part) > 2):
+                    matched.append((name, xf, yf))
+                    continue
+        
+        # Try fuzzy matching for common OCR errors
+        if name == "episode" and any(word in text for word in ["epis", "epi", "ep"]):
+            matched.append((name, xf, yf))
+        elif name == "battle" and any(word in text for word in ["batt", "bat", "atte"]):
+            matched.append((name, xf, yf))
+        elif name == "summon" and any(word in text for word in ["summ", "sum", "ummon"]):
+            matched.append((name, xf, yf))
+        elif name == "sanctuary" and any(word in text for word in ["sanct", "sanc", "anctuary"]):
+            matched.append((name, xf, yf))
+        elif name == "secret" and any(word in text for word in ["secr", "sec", "ecret"]):
+            matched.append((name, xf, yf))
+        elif name == "event" and any(word in text for word in ["even", "eve", "vent"]):
+            matched.append((name, xf, yf))
+    
+    # Filter out arena if on long cooldown or persisted as locked
+    matched = [m for m in matched if not (m[0] == "arena" and (_label_cooldown.get("arena", 0) > 0 or is_mode_locked("arena")))]
     # If no text matches, try icon/button anchors detected by perception
     if not matched and getattr(state, "ui_buttons", None):
         # Prefer known buttons that are not locked
@@ -254,9 +287,47 @@ def propose_action(state: GameState) -> tuple[float, object]:
         pct = state.stamina_current / max(1, state.stamina_cap)
         if pct < 0.1:
             return score, WaitAction(seconds=2.0)
-    # Fallback exploration: tap in a horizontal exploration band (30%-60% height)
+    
+    # Enhanced exploration: use multiple exploration patterns to avoid getting stuck
     base_w = max(1, int(settings.input_base_width))
     base_h = max(1, int(settings.input_base_height))
-    x = int(base_w * (0.35 + random.random() * 0.30))
-    y = int(base_h * (0.30 + random.random() * 0.30))
+    
+    # Track exploration pattern to avoid repetition
+    global _exploration_pattern
+    if '_exploration_pattern' not in globals():
+        _exploration_pattern = 0
+    
+    _exploration_pattern = (_exploration_pattern + 1) % 6
+    
+    if _exploration_pattern == 0:
+        # Pattern 1: Center exploration band (30%-60% height)
+        x = int(base_w * (0.35 + random.random() * 0.30))
+        y = int(base_h * (0.30 + random.random() * 0.30))
+    elif _exploration_pattern == 1:
+        # Pattern 2: Left side exploration (10%-40% width, 20%-80% height)
+        x = int(base_w * (0.10 + random.random() * 0.30))
+        y = int(base_h * (0.20 + random.random() * 0.60))
+    elif _exploration_pattern == 2:
+        # Pattern 3: Right side exploration (60%-90% width, 20%-80% height)
+        x = int(base_w * (0.60 + random.random() * 0.30))
+        y = int(base_h * (0.20 + random.random() * 0.60))
+    elif _exploration_pattern == 3:
+        # Pattern 4: Top exploration (20%-80% width, 10%-40% height)
+        x = int(base_w * (0.20 + random.random() * 0.60))
+        y = int(base_h * (0.10 + random.random() * 0.30))
+    elif _exploration_pattern == 4:
+        # Pattern 5: Bottom exploration (20%-80% width, 60%-90% height)
+        x = int(base_w * (0.20 + random.random() * 0.60))
+        y = int(base_h * (0.60 + random.random() * 0.30))
+    else:
+        # Pattern 6: Random diagonal exploration
+        x = int(base_w * random.random())
+        y = int(base_h * random.random())
+    
+    # Add small random jitter to avoid exact pixel repetition
+    jx = int((random.random() - 0.5) * 20)  # ±10 pixels
+    jy = int((random.random() - 0.5) * 20)  # ±10 pixels
+    x = max(0, min(base_w - 1, x + jx))
+    y = max(0, min(base_h - 1, y + jy))
+    
     return score, TapAction(x=x, y=y)
