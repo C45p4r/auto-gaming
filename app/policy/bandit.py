@@ -49,7 +49,7 @@ class ContextualBandit:
         except Exception:
             pass
 
-    def select(self, eligible: List[str], step: int) -> str | None:
+    def select(self, eligible: List[str], step: int, explore_boost: float = 0.0, avoid: list[str] | None = None) -> str | None:
         if not settings.rl_enabled:
             return None
         if not eligible:
@@ -58,11 +58,12 @@ class ContextualBandit:
         eps1 = max(0.0, min(1.0, settings.rl_eps_end))
         # simple exponential decay with step proxy
         decay = 0.995 ** max(0, step)
-        eps = max(eps1, eps0 * decay)
+        eps = max(eps1, min(1.0, eps0 * decay + max(0.0, min(1.0, explore_boost))))
+        pool = [e for e in eligible if not avoid or e not in avoid] or eligible
         if random.random() < eps:
-            return random.choice(eligible)
+            return random.choice(pool)
         # exploit: pick arm with highest mean among eligible
-        best = max(eligible, key=lambda a: self.arms.get(a, ArmStats()).mean)
+        best = max(pool, key=lambda a: self.arms.get(a, ArmStats()).mean)
         return best
 
     def update(self, label: str, reward: float) -> None:

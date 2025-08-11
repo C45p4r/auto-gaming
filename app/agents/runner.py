@@ -319,10 +319,15 @@ class AgentRunner:
                     next_step=action.__class__.__name__,
                     extra=self._stats_extra(),
                 )
-                # Bandit selection: if proposed action targets a known label, bias via exploration policy
+                # Bandit selection: derive eligible labels from visible buttons; bias via exploration policy
                 try:
                     chosen_label = None
-                    if hasattr(state, "ui_buttons") and state.ui_buttons and hasattr(action, "x") and hasattr(action, "y") and state.img_width and state.img_height:
+                    eligible: list[str] = []
+                    if hasattr(state, "ui_buttons") and state.ui_buttons and state.img_width and state.img_height:
+                        for b in state.ui_buttons:
+                            if getattr(b, "label", None):
+                                eligible.append(b.label)
+                    if hasattr(action, "x") and hasattr(action, "y") and state.img_width and state.img_height and state.ui_buttons:
                         ax = int(getattr(action, "x"))
                         ay = int(getattr(action, "y"))
                         ix = int(ax / max(1, int(settings.input_base_width)) * state.img_width)
@@ -335,11 +340,18 @@ class AgentRunner:
                             if d < best_d:
                                 best_d = d
                                 chosen_label = b.label
-                    # Explore/exploit among eligible labels (skip None)
-                    if chosen_label:
-                        override = self._bandit.select([chosen_label], self._step_counter)
-                        if override and override != chosen_label:
-                            await bus.publish_step("rl:override", {"from": chosen_label, "to": override})
+                    # Encourage exploration more when stuck counter is elevated
+                    explore_boost = 0.2 if self._unchanged_count >= 2 else 0.0
+                    avoid = []
+                    try:
+                        from app.state.profile import is_mode_locked
+                        avoid = [lbl for lbl in eligible if is_mode_locked(lbl)]
+                    except Exception:
+                        pass
+                    if eligible:
+                        selected = self._bandit.select(eligible, self._step_counter, explore_boost=explore_boost, avoid=avoid)
+                        if selected and chosen_label and selected != chosen_label:
+                            await bus.publish_step("rl:override", {"from": chosen_label, "to": selected})
                 except Exception:
                     pass
                 # Save recent frame snapshot to static/frames with OCR JSON for Memory tab (throttled)

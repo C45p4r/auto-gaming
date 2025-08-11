@@ -1,6 +1,6 @@
 # auto-gaming
 
-Status: Beta v1.0.1 (Windows Emulator). Core features implemented; policy now consults memory first and learns to avoid locked features.
+Status: Beta v1.0.2 (Windows Emulator). OCR ensemble enabled; RL exploration more aggressive and diversity-aware; still memory-first with locked-feature learning.
 
 ## Vision
 
@@ -659,14 +659,23 @@ The agent includes a lightweight contextual bandit to guide exploration.
 - Environment variables:
   - `RL_ENABLED=true|false` — enable/disable bandit guidance (default true)
   - `RL_METHOD=bandit|off` — select algorithm (currently bandit)
-  - `RL_EPS_START=0.2` — initial epsilon for exploration
-  - `RL_EPS_END=0.05` — floor for epsilon after decay
+- `RL_EPS_START=0.35` — initial epsilon for exploration (more aggressive)
+- `RL_EPS_END=0.10` — floor for epsilon after decay
   - `RL_PERSIST_PATH=data/policy.json` — where learned arm statistics are stored
 - Arms: high‑level targets such as `episode`, `side story`, `battle`, `hunt`, `arena`, `summon`, `shop`, `sanctuary`.
 - Reward shaping: positive for `daily_progress` increases; negative for `blocks`, `stuck_events`, and `decision_latency_ms` increases.
 - Safety: locked features (learned from popups/memory) are skipped by heuristic and down‑weighted by orchestrator.
 
 Notes:
+
+- The bandit now derives eligible arms from all visible UI button labels and avoids locked ones; it also boosts exploration when the screen is unchanged to break loops.
+
+OCR ensemble configuration:
+
+```env
+OCR_ENSEMBLE=true
+OCR_ENGINES=tesseract,tesseract_batched,paddle
+```
 
 - Guidance/Goals edits are persisted to `data/guidance.json`.
 - The policy consults memory before proposing actions; check the “Agent Steps” stream for `memory:search` and `memory:locked_labels`.
