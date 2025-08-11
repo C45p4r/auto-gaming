@@ -158,6 +158,7 @@ function App() {
         <h2>Guidance</h2>
         <div>Prioritize: {guidance.prioritize.join(", ") || "-"}</div>
         <div>Avoid: {guidance.avoid.join(", ") || "-"}</div>
+        <GuidanceEditor current={guidance} onSaved={() => {/* no-op: ws will update */}} />
       </section>
       <section>
         <h2>Decisions</h2>
@@ -254,9 +255,11 @@ function MemoryPanel() {
 function SessionReplay() {
   const [rows, setRows] = useState<{ ts: string; action: string; reason: string; image_path?: string | null }[]>([]);
   const [jsonl, setJsonl] = useState<string>("");
+  const [idx, setIdx] = useState<number>(-1);
   async function refresh() {
     const j = await fetch("/analytics/session").then((r) => r.json());
     setRows(j);
+    if (j.length && idx === -1) setIdx(j.length - 1);
   }
   async function exportJsonl() {
     const t = await fetch("/analytics/session/export").then((r) => r.text());
@@ -278,6 +281,24 @@ function SessionReplay() {
         <button onClick={importJsonl}>Import</button>
         <textarea placeholder="paste JSONL here" value={jsonl} onChange={(e) => setJsonl(e.target.value)} style={{ flex: 1, height: 80 }} />
       </div>
+      {rows.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <input type="range" min={0} max={rows.length - 1} value={Math.max(0, Math.min(idx, rows.length - 1))} onChange={(e) => setIdx(Number(e.target.value))} style={{ width: "100%" }} />
+          <div style={{ fontSize: 12, color: "#6b7280" }}>Index: {idx} / {rows.length - 1}</div>
+          {rows[idx] && (
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginTop: 6 }}>
+              <div>
+                <div><strong>{rows[idx].ts}</strong></div>
+                <div>Action: {rows[idx].action}</div>
+                <div>Reason: {rows[idx].reason}</div>
+              </div>
+              <div style={{ width: 240, background: "#000" }}>
+                {rows[idx].image_path ? <img src={rows[idx].image_path} alt={rows[idx].ts} style={{ width: "100%" }} /> : <div style={{ color: "#9ca3af", padding: 8 }}>(no frame)</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -419,6 +440,35 @@ function DoctorPanel() {
       )}
       <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(data.details, null, 2)}</pre>
       <button onClick={refresh} style={{ padding: "6px 12px" }}>Re-run</button>
+    </div>
+  );
+}
+
+function GuidanceEditor({ current, onSaved }: { current: { prioritize: string[]; avoid: string[] }; onSaved: () => void }) {
+  const [pri, setPri] = useState<string>(current.prioritize.join(", "));
+  const [avd, setAvd] = useState<string>(current.avoid.join(", "));
+  async function save() {
+    const payload = {
+      prioritize: pri.split(",").map((s) => s.trim()).filter(Boolean),
+      avoid: avd.split(",").map((s) => s.trim()).filter(Boolean),
+    };
+    await fetch("/telemetry/guidance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    onSaved();
+  }
+  return (
+    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ fontWeight: 600 }}>Edit Guidance</div>
+      <label>
+        Prioritize
+        <input value={pri} onChange={(e) => setPri(e.target.value)} placeholder="comma separated" style={{ marginLeft: 6, width: "100%" }} />
+      </label>
+      <label>
+        Avoid
+        <input value={avd} onChange={(e) => setAvd(e.target.value)} placeholder="comma separated" style={{ marginLeft: 6, width: "100%" }} />
+      </label>
+      <div>
+        <button onClick={save}>Save</button>
+      </div>
     </div>
   );
 }
