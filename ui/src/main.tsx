@@ -28,6 +28,7 @@ function App() {
   const [decisions, setDecisions] = useState<any[]>([]);
   const [steps, setSteps] = useState<{ timestamp_utc: string; kind: string; payload: any }[]>([]);
   const [guidance, setGuidance] = useState<{ prioritize: string[]; avoid: string[] }>({ prioritize: [], avoid: [] });
+  const [hfEnabled, setHfEnabled] = useState<boolean>(true);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -88,6 +89,13 @@ function App() {
           <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) })}>Back</button>
           <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) })}>Wait 1s</button>
           <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) })}>Swipe gentle</button>
+          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <input type="checkbox" checked={hfEnabled} onChange={async (e) => {
+              setHfEnabled(e.target.checked);
+              await fetch("/telemetry/control/model/policy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
+            }} />
+            hf-policy enabled
+          </label>
         </div>
       </section>
       <section>

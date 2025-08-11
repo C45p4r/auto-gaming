@@ -21,6 +21,7 @@ from datetime import datetime
 from app.diagnostics.doctor import run_self_check, suggestions_for
 from app.actions.executor import execute
 from app.actions.types import BackAction, WaitAction, SwipeAction
+from app.agents.orchestrator import set_hf_policy_enabled, get_hf_policy_enabled
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -152,6 +153,13 @@ async def control_act(payload: dict[str, Any] = Body(...)) -> dict[str, str]:
     else:
         return {"status": "ignored"}
     return {"status": "ok"}
+
+
+@router.post("/control/model/policy")
+async def control_model_policy(payload: dict[str, Any] = Body(...)) -> dict[str, object]:
+    enabled = bool(payload.get("enabled", True))
+    set_hf_policy_enabled(enabled)
+    return {"hf_policy_enabled": get_hf_policy_enabled()}
 
 
 @router.get("/window/rect")

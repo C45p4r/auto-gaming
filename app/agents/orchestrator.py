@@ -22,12 +22,22 @@ async def run_with_timeout(fn: Callable[[], Candidate], timeout_s: float) -> Can
 
 
 _hf_policy: HFPolicy | None = None
+_hf_policy_enabled: bool = True
+
+
+def set_hf_policy_enabled(enabled: bool) -> None:
+    global _hf_policy_enabled
+    _hf_policy_enabled = bool(enabled)
+
+
+def get_hf_policy_enabled() -> bool:
+    return _hf_policy_enabled
 
 
 def agent_policy(state: GameState) -> Candidate:
     global _hf_policy
     # Try HF policy if configured
-    if settings.hf_model_id_policy:
+    if settings.hf_model_id_policy and _hf_policy_enabled:
         try:
             if _hf_policy is None:
                 _hf_policy = HFPolicy()

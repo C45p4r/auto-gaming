@@ -26,18 +26,32 @@ export function MetricsChart() {
       <h2>Metrics</h2>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
         {keys.map((k) => (
-          <label key={k} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-            <input type="radio" name="metric" checked={selected === k} onChange={() => setSelected(k)} />
+          <label
+            key={k}
+            style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+            <input
+              type="radio"
+              name="metric"
+              checked={selected === k}
+              onChange={() => setSelected(k)}
+            />
             {k}
           </label>
         ))}
         {selected && (
-          <button onClick={() => setSelected(null)} style={{ marginLeft: 8 }}>Show all</button>
+          <button
+            onClick={() => setSelected(null)}
+            style={{ marginLeft: 8 }}>
+            Show all
+          </button>
         )}
       </div>
       {selected ? (
         <div>
-          <MiniChart name={selected} points={series[selected] ?? []} />
+          <MiniChart
+            name={selected}
+            points={series[selected] ?? []}
+          />
           {compare[selected] && (
             <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
               Chunks avg: {compare[selected].chunks.map((v) => v.toFixed(2)).join(", ")} | Delta: {compare[selected].delta.toFixed(2)}
@@ -47,7 +61,11 @@ export function MetricsChart() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
           {keys.map((name) => (
-            <MiniChart key={name} name={name} points={series[name] ?? []} />
+            <MiniChart
+              key={name}
+              name={name}
+              points={series[name] ?? []}
+            />
           ))}
         </div>
       )}
