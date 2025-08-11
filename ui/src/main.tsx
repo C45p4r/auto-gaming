@@ -38,6 +38,7 @@ function App() {
     }
   });
   const wsRef = useRef<WebSocket | null>(null);
+  const [route, setRoute] = useState<string>(() => (location.hash ? location.hash.replace(/^#\/?/, "") : "status"));
 
   useEffect(() => {
     const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host.replace(/:\d+$/, ":8000") + "/telemetry/ws";
@@ -52,6 +53,15 @@ function App() {
     };
     wsRef.current = ws;
     return () => ws.close();
+  }, []);
+
+  useEffect(() => {
+    function onHashChange() {
+      const h = location.hash.replace(/^#\/?/, "");
+      setRoute(h || "status");
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
   useEffect(() => {
@@ -87,33 +97,41 @@ function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const Nav = (
+    <nav style={{ display: "flex", flexWrap: "wrap", gap: 8, padding: "8px 0" }}>
+      {[
+        ["status", "Status"],
+        ["steps", "Agent Steps"],
+        ["decisions", "Decisions"],
+        ["replay", "Session Replay"],
+        ["metrics", "Metrics"],
+        ["memory", "Memory"],
+        ["window", "Window"],
+        ["doctor", "Doctor"],
+        ["guidance", "Guidance"],
+        ["goals", "Goals"],
+        ["suggestions", "Suggestions"],
+        ["logs", "Client Logs"],
+      ].map(([key, label]) => (
+        <a key={key as string} href={`#/${key}`} style={{ padding: "4px 8px", borderRadius: 6, background: route === key ? "#e5e7eb" : "#f3f4f6", textDecoration: "none", color: "inherit" }}>
+          {label as string}
+        </a>
+      ))}
+    </nav>
+  );
+
   return (
-    <div style={{ fontFamily: "Inter, system-ui, Arial", padding: 16, maxWidth: 960, margin: "0 auto" }}>
+    <div style={{ fontFamily: "Inter, system-ui, Arial", padding: 16, maxWidth: 1100, margin: "0 auto" }}>
       <h1>auto-gaming</h1>
-      <section style={{ position: "sticky", top: 0, background: "#fff", paddingBottom: 8, zIndex: 10 }}>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={() => fetch("/telemetry/control/start", { method: "POST" })}
-            style={{ padding: "6px 12px", background: "#10b981", color: "#fff", borderRadius: 6, border: 0 }}>
-            Start
-          </button>
-          <button
-            onClick={() => fetch("/telemetry/control/pause", { method: "POST" })}
-            style={{ padding: "6px 12px", background: "#f59e0b", color: "#fff", borderRadius: 6, border: 0 }}>
-            Pause
-          </button>
-          <button
-            onClick={() => fetch("/telemetry/control/stop", { method: "POST" })}
-            style={{ padding: "6px 12px", background: "#ef4444", color: "#fff", borderRadius: 6, border: 0 }}>
-            Stop
-          </button>
+      <section style={{ position: "sticky", top: 0, background: "var(--bg, #fff)", paddingBottom: 8, zIndex: 10 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button onClick={() => fetch("/telemetry/control/start", { method: "POST" })} style={{ padding: "6px 12px", background: "#10b981", color: "#fff", borderRadius: 6, border: 0 }}>Start</button>
+          <button onClick={() => fetch("/telemetry/control/pause", { method: "POST" })} style={{ padding: "6px 12px", background: "#f59e0b", color: "#fff", borderRadius: 6, border: 0 }}>Pause</button>
+          <button onClick={() => fetch("/telemetry/control/stop", { method: "POST" })} style={{ padding: "6px 12px", background: "#ef4444", color: "#fff", borderRadius: 6, border: 0 }}>Stop</button>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
             <label>
               Theme
-              <select
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                style={{ marginLeft: 6 }}>
+              <select value={theme} onChange={(e) => setTheme(e.target.value)} style={{ marginLeft: 6 }}>
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
                 <option value="system">System</option>
@@ -122,163 +140,166 @@ function App() {
             <span style={{ fontSize: 12, color: "#6b7280" }}>(Shortcuts: S start, P pause, X stop, B back, W wait, G gentle swipe, T theme)</span>
           </div>
         </div>
+        {Nav}
       </section>
-      <section className="card">
-        <h2>Agent Steps</h2>
-        <ul>
-          {steps.map((s, idx) => (
-            <li key={idx}>
-              <code>{s.timestamp_utc}</code> — <strong>{s.kind}</strong>
-              <pre style={{ whiteSpace: "pre-wrap", overflow: "auto", background: "#f9fafb", padding: 8 }}>{JSON.stringify(s.payload, null, 2)}</pre>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="card">
-        <h2>Status</h2>
-        <div>Agent: {status.agent_state ?? "-"}</div>
-        <div>Task: {status.task ?? "-"}</div>
-        <div>Confidence: {status.confidence ?? "-"}</div>
-        <div>Next: {status.next ?? "-"}</div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) })}>Back</button>
-          <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) })}>Wait 1s</button>
-          <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) })}>Swipe gentle</button>
-          <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <input
-              type="checkbox"
-              checked={hfEnabled}
-              onChange={async (e) => {
-                setHfEnabled(e.target.checked);
-                await fetch("/telemetry/control/model/policy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
-              }}
-            />
-            hf-policy enabled
-          </label>
-        </div>
-      </section>
-      <section className="card">
-        <h2>Performance</h2>
-        <div className="grid-3">
-          <Stat
-            label="FPS"
-            value={status.fps !== undefined ? status.fps.toFixed(2) : "-"}
-          />
-          <Stat
-            label="Actions"
-            value={status.actions ?? 0}
-          />
-          <Stat
-            label="Taps"
-            value={status.taps ?? 0}
-          />
-          <Stat
-            label="Swipes"
-            value={status.swipes ?? 0}
-          />
-          <Stat
-            label="Backs"
-            value={status.backs ?? 0}
-          />
-          <Stat
-            label="Blocks"
-            value={status.blocks ?? 0}
-          />
-          <Stat
-            label="Stuck"
-            value={status.stuck_events ?? 0}
-          />
-          <Stat
-            label="Window OK"
-            value={status.window_ok ? "Yes" : "No"}
-          />
-          <Stat
-            label="Capture"
-            value={status.capture_backend ?? "-"}
-          />
-          <Stat
-            label="Input"
-            value={status.input_backend ?? "-"}
-          />
-        </div>
-        <div style={{ marginTop: 6, color: "#6b7280", fontSize: 12 }}>
-          Model: {status.model_policy} {status.model_id_policy}
-        </div>
-      </section>
-      <section className="card">
-        <h2>Client Logs</h2>
-        <div style={{ maxHeight: 180, overflow: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12 }}>
-          {log.map((line, i) => (
-            <div key={i}>{line}</div>
-          ))}
-        </div>
-      </section>
-      <section className="card">
-        <h2>Window</h2>
-        <WindowControls />
-      </section>
-      <section className="card">
-        <h2>Doctor</h2>
-        <DoctorPanel />
-      </section>
-      <section className="card">
-        <h2>Guidance</h2>
-        <div>Prioritize: {guidance.prioritize.join(", ") || "-"}</div>
-        <div>Avoid: {guidance.avoid.join(", ") || "-"}</div>
-        <HelpPromptBox current={guidance.help_prompt || ""} />
-        <GuidanceEditor
-          current={guidance}
-          onSaved={() => {
-            /* no-op: ws will update */
-          }}
-        />
-      </section>
-      <section className="card">
-        <h2>Goals</h2>
-        <GoalsPanel goals={(guidance as any).goals || []} />
-      </section>
-      <section className="card">
-        <h2>Suggestions</h2>
-        <SuggestionBox suggestions={((guidance as any).suggestions as string[]) || []} />
-      </section>
-      <section className="card">
-        <h2>Decisions</h2>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Time</th>
-              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Who</th>
-              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Action</th>
-              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Latency (ms)</th>
-              <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>OCR</th>
-            </tr>
-          </thead>
-          <tbody>
-            {decisions.map((d, idx) => (
-              <tr key={idx}>
-                <td style={{ padding: "6px 4px" }}>
-                  <code>{d.timestamp_utc}</code>
-                </td>
-                <td style={{ padding: "6px 4px" }}>{d.who}</td>
-                <td style={{ padding: "6px 4px" }}>{d.action?.type}</td>
-                <td style={{ padding: "6px 4px" }}>{typeof d.latency_ms === "number" ? d.latency_ms.toFixed(1) : "-"}</td>
-                <td style={{ padding: "6px 4px", maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.ocr_fp}</td>
-              </tr>
+
+      {route === "steps" && (
+        <section className="card">
+          <h2>Agent Steps</h2>
+          <ul>
+            {steps.map((s, idx) => (
+              <li key={idx}>
+                <code>{s.timestamp_utc}</code> — <strong>{s.kind}</strong>
+                <pre style={{ whiteSpace: "pre-wrap", overflow: "auto", background: "#f9fafb", padding: 8 }}>{JSON.stringify(s.payload, null, 2)}</pre>
+              </li>
             ))}
-          </tbody>
-        </table>
-      </section>
-      <section className="card">
-        <h2>Session Replay</h2>
-        <SessionReplay />
-      </section>
-      <section className="card">
-        <MetricsChart />
-      </section>
-      <section className="card">
-        <h2>Memory</h2>
-        <MemoryPanel />
-      </section>
+          </ul>
+        </section>
+      )}
+
+      {route === "status" && (
+        <>
+          <section className="card">
+            <h2>Status</h2>
+            <div>Agent: {status.agent_state ?? "-"}</div>
+            <div>Task: {status.task ?? "-"}</div>
+            <div>Confidence: {status.confidence ?? "-"}</div>
+            <div>Next: {status.next ?? "-"}</div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) })}>Back</button>
+              <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) })}>Wait 1s</button>
+              <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) })}>Swipe gentle</button>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={hfEnabled}
+                  onChange={async (e) => {
+                    setHfEnabled(e.target.checked);
+                    await fetch("/telemetry/control/model/policy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
+                  }}
+                />
+                hf-policy enabled
+              </label>
+            </div>
+          </section>
+          <section className="card">
+            <h2>Performance</h2>
+            <div className="grid-3">
+              <Stat label="FPS" value={status.fps !== undefined ? status.fps.toFixed(2) : "-"} />
+              <Stat label="Actions" value={status.actions ?? 0} />
+              <Stat label="Taps" value={status.taps ?? 0} />
+              <Stat label="Swipes" value={status.swipes ?? 0} />
+              <Stat label="Backs" value={status.backs ?? 0} />
+              <Stat label="Blocks" value={status.blocks ?? 0} />
+              <Stat label="Stuck" value={status.stuck_events ?? 0} />
+              <Stat label="Window OK" value={status.window_ok ? "Yes" : "No"} />
+              <Stat label="Capture" value={status.capture_backend ?? "-"} />
+              <Stat label="Input" value={status.input_backend ?? "-"} />
+            </div>
+            <div style={{ marginTop: 6, color: "#6b7280", fontSize: 12 }}>Model: {status.model_policy} {status.model_id_policy}</div>
+          </section>
+        </>
+      )}
+
+      {route === "logs" && (
+        <section className="card">
+          <h2>Client Logs</h2>
+          <div style={{ maxHeight: 420, overflow: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12 }}>
+            {log.map((line, i) => (
+              <div key={i}>{line}</div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {route === "window" && (
+        <section className="card">
+          <h2>Window</h2>
+          <WindowControls />
+        </section>
+      )}
+
+      {route === "doctor" && (
+        <section className="card">
+          <h2>Doctor</h2>
+          <DoctorPanel />
+        </section>
+      )}
+
+      {route === "guidance" && (
+        <section className="card">
+          <h2>Guidance</h2>
+          <div>Prioritize: {guidance.prioritize.join(", ") || "-"}</div>
+          <div>Avoid: {guidance.avoid.join(", ") || "-"}</div>
+          <HelpPromptBox current={guidance.help_prompt || ""} />
+          <GuidanceEditor current={guidance} onSaved={() => {}} />
+        </section>
+      )}
+
+      {route === "goals" && (
+        <section className="card">
+          <h2>Goals</h2>
+          <GoalsPanel goals={(guidance as any).goals || []} />
+        </section>
+      )}
+
+      {route === "suggestions" && (
+        <section className="card">
+          <h2>Suggestions</h2>
+          <SuggestionBox suggestions={((guidance as any).suggestions as string[]) || []} />
+        </section>
+      )}
+
+      {route === "decisions" && (
+        <section className="card">
+          <h2>Decisions</h2>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Time</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Who</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Action</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Latency (ms)</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>OCR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {decisions.map((d, idx) => (
+                <tr key={idx}>
+                  <td style={{ padding: "6px 4px" }}>
+                    <code>{d.timestamp_utc}</code>
+                  </td>
+                  <td style={{ padding: "6px 4px" }}>{d.who}</td>
+                  <td style={{ padding: "6px 4px" }}>{d.action?.type}</td>
+                  <td style={{ padding: "6px 4px" }}>{typeof d.latency_ms === "number" ? d.latency_ms.toFixed(1) : "-"}</td>
+                  <td style={{ padding: "6px 4px", maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{d.ocr_fp}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {route === "replay" && (
+        <section className="card">
+          <h2>Session Replay</h2>
+          <SessionReplay />
+        </section>
+      )}
+
+      {route === "metrics" && (
+        <section className="card">
+          <h2>Metrics</h2>
+          <MetricsChart />
+        </section>
+      )}
+
+      {route === "memory" && (
+        <section className="card">
+          <h2>Memory</h2>
+          <MemoryPanel />
+        </section>
+      )}
     </div>
   );
 }
@@ -656,9 +677,19 @@ function GoalsPanel({ goals }: { goals: { name: string; approved?: boolean }[] }
     <div>
       <ul>
         {items.map((g, i) => (
-          <li key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <input type="checkbox" checked={g.approved} onChange={(e) => setItems((arr) => arr.map((x, idx) => (idx === i ? { ...x, approved: e.target.checked } : x)))} />
-            <input value={g.name} onChange={(e) => setItems((arr) => arr.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))} style={{ flex: 1 }} />
+          <li
+            key={i}
+            style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <input
+              type="checkbox"
+              checked={g.approved}
+              onChange={(e) => setItems((arr) => arr.map((x, idx) => (idx === i ? { ...x, approved: e.target.checked } : x)))}
+            />
+            <input
+              value={g.name}
+              onChange={(e) => setItems((arr) => arr.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))}
+              style={{ flex: 1 }}
+            />
           </li>
         ))}
       </ul>
