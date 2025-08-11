@@ -22,6 +22,7 @@ from app.diagnostics.doctor import run_self_check, suggestions_for
 from app.actions.executor import execute
 from app.actions.types import BackAction, WaitAction, SwipeAction
 from app.agents.orchestrator import set_hf_policy_enabled, get_hf_policy_enabled
+from app.telemetry.bus import bus
 
 router = APIRouter(prefix="/telemetry", tags=["telemetry"])
 
@@ -160,6 +161,13 @@ async def control_model_policy(payload: dict[str, Any] = Body(...)) -> dict[str,
     enabled = bool(payload.get("enabled", True))
     set_hf_policy_enabled(enabled)
     return {"hf_policy_enabled": get_hf_policy_enabled()}
+
+
+@router.post("/guidance/help")
+async def post_help_prompt(payload: dict[str, Any] = Body(...)) -> dict[str, str | None]:
+    text = str(payload.get("text", ""))
+    await bus.set_help_prompt(text)
+    return {"help_prompt": bus.get_help_prompt()}
 
 
 @router.get("/window/rect")

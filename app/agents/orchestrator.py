@@ -9,6 +9,7 @@ from app.config import settings
 from app.services.hf.policy import HFPolicy
 from app.services.hf.judge import HFJudge
 from app.state.encoder import GameState
+from app.telemetry.bus import bus
 
 Candidate = tuple[float, object, str]
 
@@ -94,7 +95,16 @@ async def orchestrate(state: GameState) -> Candidate:
         round_candidates.extend(candidates)
 
     if not round_candidates:
-        raise RuntimeError("No candidates after debate rounds")
+        # Fallback: ask for help prompt if available; otherwise tap exploration band
+        help_text = bus.get_guidance().prioritize if hasattr(bus, "get_guidance") else []
+        # provide a minimal safe fallback action
+        from app.actions.types import TapAction
+        base_w =  max(1, int(getattr(__import__('app.config').config.settings, 'input_base_width', 1280)))
+        base_h =  max(1, int(getattr(__import__('app.config').config.settings, 'input_base_height', 720)))
+        import random
+        x = int(base_w * (0.35 + random.random() * 0.30))
+        y = int(base_h * (0.30 + random.random() * 0.30))
+        return 0.1, TapAction(x=x, y=y), "fallback"
     # Use HF judge if configured
     if settings.hf_model_id_judge:
         try:

@@ -27,10 +27,14 @@ function App() {
   const [log, setLog] = useState<string[]>([]);
   const [decisions, setDecisions] = useState<any[]>([]);
   const [steps, setSteps] = useState<{ timestamp_utc: string; kind: string; payload: any }[]>([]);
-  const [guidance, setGuidance] = useState<{ prioritize: string[]; avoid: string[] }>({ prioritize: [], avoid: [] });
+  const [guidance, setGuidance] = useState<{ prioritize: string[]; avoid: string[]; help_prompt?: string }>({ prioritize: [], avoid: [], help_prompt: "" });
   const [hfEnabled, setHfEnabled] = useState<boolean>(true);
   const [theme, setTheme] = useState<string>(() => {
-    try { return localStorage.getItem("ui_theme") || "light"; } catch { return "light"; }
+    try {
+      return localStorage.getItem("ui_theme") || "light";
+    } catch {
+      return "light";
+    }
   });
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -50,7 +54,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem("ui_theme", theme); } catch {}
+    try {
+      localStorage.setItem("ui_theme", theme);
+    } catch {}
     const root = document.documentElement;
     if (theme === "dark") {
       root.style.backgroundColor = "#0f172a";
@@ -103,7 +109,10 @@ function App() {
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
             <label>
               Theme
-              <select value={theme} onChange={(e) => setTheme(e.target.value)} style={{ marginLeft: 6 }}>
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                style={{ marginLeft: 6 }}>
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
                 <option value="system">System</option>
@@ -215,6 +224,7 @@ function App() {
         <h2>Guidance</h2>
         <div>Prioritize: {guidance.prioritize.join(", ") || "-"}</div>
         <div>Avoid: {guidance.avoid.join(", ") || "-"}</div>
+        <HelpPromptBox current={guidance.help_prompt || ""} />
         <GuidanceEditor
           current={guidance}
           onSaved={() => {
@@ -580,6 +590,22 @@ function GuidanceEditor({ current, onSaved }: { current: { prioritize: string[];
       </label>
       <div>
         <button onClick={save}>Save</button>
+      </div>
+    </div>
+  );
+}
+
+function HelpPromptBox({ current }: { current: string }) {
+  const [text, setText] = useState<string>(current || "");
+  async function save() {
+    await fetch("/telemetry/guidance/help", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+  }
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontWeight: 600 }}>Need help? Describe the screen/problem:</div>
+      <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="e.g., I am at battle menu, how to proceed?" style={{ width: "100%", height: 60 }} />
+      <div>
+        <button onClick={save}>Submit</button>
       </div>
     </div>
   );

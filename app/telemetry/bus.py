@@ -33,6 +33,7 @@ class TelemetryBus:
         self._decision_log: list[DecisionLogEntry] = []
         self._guidance: Guidance = Guidance()
         self._lock = asyncio.Lock()
+        self._help_prompt: str | None = None
 
     async def subscribe(self) -> asyncio.Queue[dict[str, Any]]:
         q: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
@@ -113,6 +114,13 @@ class TelemetryBus:
 
     def get_guidance(self) -> Guidance:
         return self._guidance
+
+    async def set_help_prompt(self, prompt: str | None) -> None:
+        self._help_prompt = (prompt or "").strip() or None
+        await self._broadcast({"type": "guidance", "data": {**self._guidance.__dict__, "help_prompt": self._help_prompt}})
+
+    def get_help_prompt(self) -> str | None:
+        return self._help_prompt
 
 
 bus = TelemetryBus()
