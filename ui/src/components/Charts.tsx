@@ -22,7 +22,7 @@ export function MetricsChart() {
   const keys = useMemo(() => Object.keys(series).sort(), [series]);
 
   return (
-    <div>
+    <div className="card">
       <h2>Metrics</h2>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
         {keys.map((k) => (
@@ -76,18 +76,14 @@ export function MetricsChart() {
 function MiniChart({ name, points }: { name: string; points: Point[] }) {
   const last = points.at(-1)?.value;
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+    <div className="mini-chart card">
+      <div className="header">
         <strong>{name}</strong>
-        <span style={{ color: "#6b7280" }}>{last !== undefined ? last.toFixed(2) : "-"}</span>
+        <span className="delta">{last !== undefined ? last.toFixed(2) : "-"}</span>
       </div>
-      <div style={{ display: "flex", gap: 2, alignItems: "flex-end", minHeight: 60 }}>
+      <div className="bars">
         {points.slice(-80).map((p, i) => (
-          <div
-            key={i}
-            title={`${p.ts}: ${p.value}`}
-            style={{ width: 3, height: Math.max(2, p.value * 10), background: "#4f46e5" }}
-          />
+          <div key={i} className="bar" title={`${p.ts}: ${p.value}`} style={{ height: Math.max(2, p.value * 10) }} />
         ))}
       </div>
     </div>

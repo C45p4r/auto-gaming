@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import "./styles.scss";
 import { MetricsChart } from "./components/Charts";
 import { createRoot } from "react-dom/client";
 
@@ -122,7 +123,7 @@ function App() {
           </div>
         </div>
       </section>
-      <section>
+      <section className="card">
         <h2>Agent Steps</h2>
         <ul>
           {steps.map((s, idx) => (
@@ -133,7 +134,7 @@ function App() {
           ))}
         </ul>
       </section>
-      <section>
+      <section className="card">
         <h2>Status</h2>
         <div>Agent: {status.agent_state ?? "-"}</div>
         <div>Task: {status.task ?? "-"}</div>
@@ -156,9 +157,9 @@ function App() {
           </label>
         </div>
       </section>
-      <section>
+      <section className="card">
         <h2>Performance</h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+        <div className="grid-3">
           <Stat
             label="FPS"
             value={status.fps !== undefined ? status.fps.toFixed(2) : "-"}
@@ -204,7 +205,7 @@ function App() {
           Model: {status.model_policy} {status.model_id_policy}
         </div>
       </section>
-      <section>
+      <section className="card">
         <h2>Client Logs</h2>
         <div style={{ maxHeight: 180, overflow: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12 }}>
           {log.map((line, i) => (
@@ -212,15 +213,15 @@ function App() {
           ))}
         </div>
       </section>
-      <section>
+      <section className="card">
         <h2>Window</h2>
         <WindowControls />
       </section>
-      <section>
+      <section className="card">
         <h2>Doctor</h2>
         <DoctorPanel />
       </section>
-      <section>
+      <section className="card">
         <h2>Guidance</h2>
         <div>Prioritize: {guidance.prioritize.join(", ") || "-"}</div>
         <div>Avoid: {guidance.avoid.join(", ") || "-"}</div>
@@ -232,7 +233,7 @@ function App() {
           }}
         />
       </section>
-      <section>
+      <section className="card">
         <h2>Decisions</h2>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -259,14 +260,14 @@ function App() {
           </tbody>
         </table>
       </section>
-      <section>
+      <section className="card">
         <h2>Session Replay</h2>
         <SessionReplay />
       </section>
-      <section>
+      <section className="card">
         <MetricsChart />
       </section>
-      <section>
+      <section className="card">
         <h2>Memory</h2>
         <MemoryPanel />
       </section>
@@ -278,9 +279,9 @@ createRoot(document.getElementById("root")!).render(<App />);
 
 function Stat(props: { label: string; value: string | number }) {
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 8 }}>
-      <div style={{ color: "#6b7280", fontSize: 12 }}>{props.label}</div>
-      <div style={{ fontSize: 18, fontWeight: 600 }}>{props.value}</div>
+    <div className="stat-tile">
+      <div className="stat-label">{props.label}</div>
+      <div className="stat-value">{props.value}</div>
     </div>
   );
 }
