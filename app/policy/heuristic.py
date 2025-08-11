@@ -4,6 +4,7 @@ from app.actions.types import TapAction, WaitAction, BackAction
 from app.metrics.registry import compute_metrics, score_metrics
 from app.state.encoder import GameState
 from app.config import settings
+from app.state.profile import is_mode_sufficient, mark_mode_done, reset_daily_if_new_day
 import random
 
 
@@ -38,6 +39,8 @@ def _fingerprint(text: str) -> str:
 
 def propose_action(state: GameState) -> tuple[float, object]:
     global _last_ocr_fingerprint, _repeat_count, _last_choice_idx
+    # Reset daily sufficiency flags if a new day
+    reset_daily_if_new_day()
     metrics = compute_metrics(state)
     score = score_metrics(metrics)
     # Bias toward progress: small preference for moving toward common progression menus
@@ -74,6 +77,9 @@ def propose_action(state: GameState) -> tuple[float, object]:
         ready = [t for t in matched if _label_cooldown.get(t[0], 0) <= 0] or matched
         _last_choice_idx = (_last_choice_idx + 1) % len(ready)
         name, xf, yf = ready[_last_choice_idx]
+        # If a mode is already considered sufficient today, deprioritize by small bias
+        if is_mode_sufficient(name):
+            score -= 0.03
         base_w = max(1, int(settings.input_base_width))
         base_h = max(1, int(settings.input_base_height))
         # small jitter to avoid dead pixels/overlays

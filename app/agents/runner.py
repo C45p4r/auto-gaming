@@ -29,6 +29,7 @@ from app.analytics.metrics import store as metrics_store
 from app.analytics.session import session, Step
 from app.reliability.flake import FlakeTracker
 from app.policy.cache import DecisionCache
+from app.state.profile import mark_mode_done
 
 
 RunState = Literal["idle", "running", "paused", "stopped"]
@@ -305,6 +306,12 @@ class AgentRunner:
                 # publish decision log with context
                 try:
                     ocr_fp = (state.ocr_text or "").strip().lower()[:120]
+                    # Heuristic: when we detect certain success phrases, mark mode done for the day
+                    success_cues = ("mission complete", "quest clear", "victory", "claimed")
+                    if any(c in (state.ocr_text or "").lower() for c in success_cues):
+                        for m in ("episode", "battle", "quest", "event", "arena", "shop", "summon"):
+                            if m in (state.ocr_text or "").lower():
+                                mark_mode_done(m, sufficient=True)
                     latency_ms = (time.perf_counter() - decide_t0) * 1000.0
                     try:
                         metrics_store.add_point("decision_latency_ms", float(latency_ms))
