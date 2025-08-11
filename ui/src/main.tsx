@@ -254,8 +254,8 @@ function App() {
       {route === "logs" && (
         <section className="card">
           <h2>Client Logs</h2>
-          <div style={{ height: 420, overflowY: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12 }}>
-            {log.map((line, i) => (
+          <div style={{ height: 180, overflowY: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12, lineHeight: 1.4 }}>
+            {[...log].slice(0, 10).map((line, i) => (
               <div key={i}>{line}</div>
             ))}
           </div>
