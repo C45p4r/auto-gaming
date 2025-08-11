@@ -611,16 +611,28 @@ function SuggestionBox({ suggestions }: { suggestions: string[] }) {
   return (
     <div>
       <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-        <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Suggest goals, strategies, or hints (won't pause the agent)" style={{ flex: 1, height: 60 }} />
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Suggest goals, strategies, or hints (won't pause the agent)"
+          style={{ flex: 1, height: 60 }}
+        />
         <button onClick={submit}>Submit</button>
       </div>
       {suggestions && suggestions.length > 0 && (
         <div style={{ marginTop: 8 }}>
           <div style={{ fontSize: 12, color: "#6b7280" }}>Recent Suggestions</div>
           <ul>
-            {[...suggestions].slice(-10).reverse().map((s, i) => (
-              <li key={i} style={{ fontSize: 12 }}>{s}</li>
-            ))}
+            {[...suggestions]
+              .slice(-10)
+              .reverse()
+              .map((s, i) => (
+                <li
+                  key={i}
+                  style={{ fontSize: 12 }}>
+                  {s}
+                </li>
+              ))}
           </ul>
         </div>
       )}

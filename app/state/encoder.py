@@ -7,7 +7,7 @@ from typing import Any
 
 from PIL import Image
 
-from app.perception.parser import extract_stamina, ocr_lines
+from app.perception.parser import extract_stamina, ocr_lines, ParsedText
 
 
 @dataclass(frozen=True)
@@ -57,3 +57,22 @@ def compute_state_hash_from_text(text: str) -> str:
     tokens = [t for t in text.lower().split() if t]
     token_str = "|".join(tokens)
     return hashlib.sha1(token_str.encode("utf-8")).hexdigest()
+
+
+def encode_state_parsed(parsed: ParsedText) -> GameState:
+    now = datetime.now(tz=UTC).isoformat()
+    stamina = extract_stamina(parsed.lines)
+    cur, cap = (None, None)
+    if stamina:
+        cur, cap = stamina
+    token_str = "|".join(parsed.tokens).lower()
+    sh = hashlib.sha1(token_str.encode("utf-8")).hexdigest() if token_str else None
+    return GameState(
+        timestamp_utc=now,
+        stamina_current=cur,
+        stamina_cap=cap,
+        ocr_text=parsed.raw_text,
+        ocr_lines=parsed.lines,
+        ocr_tokens=parsed.tokens,
+        state_hash=sh,
+    )
