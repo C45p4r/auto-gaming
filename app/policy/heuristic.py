@@ -134,6 +134,21 @@ def propose_action(state: GameState) -> tuple[float, object]:
             if name == "arena" and (_label_cooldown.get("arena", 0) > 0 or is_mode_locked("arena")):
                 continue
             matched.append((name, xf, yf))
+    # If no text matches, try icon/button anchors detected by perception
+    if not matched and getattr(state, "ui_buttons", None):
+        # Prefer known buttons that are not locked
+        for b in state.ui_buttons:
+            if b.label == "arena" and is_mode_locked("arena"):
+                continue
+            # map button center to base coords using image dimensions
+            if state.img_width and state.img_height:
+                base_w = max(1, int(settings.input_base_width))
+                base_h = max(1, int(settings.input_base_height))
+                cx = b.x + b.w // 2
+                cy = b.y + b.h // 2
+                x = int(cx / state.img_width * base_w)
+                y = int(cy / state.img_height * base_h)
+                return score, TapAction(x=x, y=y)
     if matched:
         # Filter out labels on cooldown
         ready = [t for t in matched if _label_cooldown.get(t[0], 0) <= 0] or matched
