@@ -38,21 +38,80 @@ function App() {
     }
   });
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectRef = useRef<number | null>(null);
+  const [wsConnected, setWsConnected] = useState<boolean>(false);
+  const pollTimersRef = useRef<number[]>([]);
   const [route, setRoute] = useState<string>(() => (location.hash ? location.hash.replace(/^#\/?/, "") : "status"));
 
+  function startPolling() {
+    // Clear existing timers
+    stopPolling();
+    // Poll status every 1s
+    const t1 = window.setInterval(async () => {
+      try {
+        const j = await fetch("/telemetry/status").then((r) => r.json());
+        setStatus(j);
+      } catch {}
+    }, 1000);
+    // Poll decisions every 2s
+    const t2 = window.setInterval(async () => {
+      try {
+        const j = await fetch("/telemetry/decisions").then((r) => r.json());
+        setDecisions(j.slice(-200).reverse());
+      } catch {}
+    }, 2000);
+    pollTimersRef.current = [t1, t2];
+  }
+
+  function stopPolling() {
+    for (const id of pollTimersRef.current) {
+      window.clearInterval(id);
+    }
+    pollTimersRef.current = [];
+  }
+
+  function connectWebSocket() {
+    try {
+      const baseHost = location.hostname + ":8000";
+      const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + baseHost + "/telemetry/ws";
+      const ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        setWsConnected(true);
+        stopPolling();
+      };
+      ws.onmessage = (evt) => {
+        const msg: TelemetryMsg = JSON.parse(evt.data);
+        if (msg.type === "status") setStatus(msg.data);
+        if (msg.type === "decision") setDecisions((d) => [msg.data, ...d].slice(0, 200));
+        if (msg.type === "guidance") setGuidance(msg.data);
+        if (msg.type === "step") setSteps((s) => [msg.data, ...s].slice(0, 200));
+        setLog((l) => [new Date().toLocaleTimeString() + " " + (typeof msg === "string" ? msg : JSON.stringify(msg)), ...l].slice(0, 200));
+      };
+      const handleWsDown = () => {
+        setWsConnected(false);
+        startPolling();
+        // Backoff reconnect
+        if (reconnectRef.current) window.clearTimeout(reconnectRef.current);
+        reconnectRef.current = window.setTimeout(connectWebSocket, 3000);
+      };
+      ws.onerror = handleWsDown;
+      ws.onclose = handleWsDown;
+      wsRef.current = ws;
+    } catch {
+      setWsConnected(false);
+      startPolling();
+      if (reconnectRef.current) window.clearTimeout(reconnectRef.current);
+      reconnectRef.current = window.setTimeout(connectWebSocket, 3000);
+    }
+  }
+
   useEffect(() => {
-    const wsUrl = (location.protocol === "https:" ? "wss://" : "ws://") + location.host.replace(/:\d+$/, ":8000") + "/telemetry/ws";
-    const ws = new WebSocket(wsUrl);
-    ws.onmessage = (evt) => {
-      const msg: TelemetryMsg = JSON.parse(evt.data);
-      if (msg.type === "status") setStatus(msg.data);
-      if (msg.type === "decision") setDecisions((d) => [msg.data, ...d].slice(0, 200));
-      if (msg.type === "guidance") setGuidance(msg.data);
-      if (msg.type === "step") setSteps((s) => [msg.data, ...s].slice(0, 200));
-      setLog((l) => [new Date().toLocaleTimeString() + " " + (typeof msg === "string" ? msg : JSON.stringify(msg)), ...l].slice(0, 200));
+    connectWebSocket();
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+      if (reconnectRef.current) window.clearTimeout(reconnectRef.current);
+      stopPolling();
     };
-    wsRef.current = ws;
-    return () => ws.close();
   }, []);
 
   useEffect(() => {
@@ -547,8 +606,8 @@ function WindowControls() {
         <input
           type="number"
           value={rect?.left ?? 0}
-          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), left: Number(e.target.value) })}
-          style={{ width: 90, marginLeft: 6 }}
+          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 882, height: 496 }), left: Number(e.target.value) })}
+          style={{ width: 80 }}
         />
       </label>
       <label>
@@ -556,26 +615,26 @@ function WindowControls() {
         <input
           type="number"
           value={rect?.top ?? 0}
-          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), top: Number(e.target.value) })}
-          style={{ width: 90, marginLeft: 6 }}
+          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 882, height: 496 }), top: Number(e.target.value) })}
+          style={{ width: 80 }}
         />
       </label>
       <label>
         Width
         <input
           type="number"
-          value={rect?.width ?? 1280}
-          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), width: Number(e.target.value) })}
-          style={{ width: 90, marginLeft: 6 }}
+          value={rect?.width ?? 0}
+          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 882, height: 496 }), width: Number(e.target.value) })}
+          style={{ width: 80 }}
         />
       </label>
       <label>
         Height
         <input
           type="number"
-          value={rect?.height ?? 720}
-          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 1280, height: 720 }), height: Number(e.target.value) })}
-          style={{ width: 90, marginLeft: 6 }}
+          value={rect?.height ?? 0}
+          onChange={(e) => setRect({ ...(rect ?? { left: 0, top: 0, width: 882, height: 496 }), height: Number(e.target.value) })}
+          style={{ width: 80 }}
         />
       </label>
       <button

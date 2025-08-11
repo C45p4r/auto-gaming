@@ -1,7 +1,7 @@
 Auto-Gaming — Notion Backup (Human-Readable)
 
 Status
-- Version: Beta v1.0.0 (Windows Emulator). Focus on Google Play Games Beta.
+- Version: Beta v1.0.3 (Windows Emulator). Enhanced OCR (3x scale, PSM 11), optimized window positioning (882x496), improved input handling with bottom margin exclusion.
 - Next target: v2.0.0 fully functional on Windows. See Roadmap below.
 
 Terminology
@@ -22,13 +22,15 @@ Quickstart (Windows)
 2) Configure .env
 - CAPTURE_BACKEND=window
 - INPUT_BACKEND=window
-- WINDOW_TITLE_HINT=Epic Seven|Google Play Games
+- WINDOW_TITLE_HINT=Google Play Games|Epic Seven|Epic 7|Epic Seven - FRl3ZD
 - WINDOW_ENFORCE_TOPMOST=true
-- WINDOW_LEFT=100, WINDOW_TOP=100, WINDOW_CLIENT_WIDTH=1280, WINDOW_CLIENT_HEIGHT=720
-- INPUT_BASE_WIDTH=1280, INPUT_BASE_HEIGHT=720
+- WINDOW_LEFT=82, WINDOW_TOP=80, WINDOW_CLIENT_WIDTH=882, WINDOW_CLIENT_HEIGHT=496
+- INPUT_BASE_WIDTH=882, INPUT_BASE_HEIGHT=496
 - INPUT_EXCLUDE_BOTTOM_PX=40
 - TESSERACT_CMD=C:\\Program Files\\Tesseract-OCR\\tesseract.exe
 - OCR_LANGUAGE=eng
+- OCR_SCALE=3.0, OCR_PSM=11, OCR_ENGINES=paddle,tesseract_batched,tesseract
+- CAPTURE_FPS=2
 3) Run
 - uvicorn app.main:app --host 127.0.0.1 --port 8000
 - Open UI dev server (Vite) or your deployed UI, connect to backend
@@ -42,19 +44,20 @@ Controls in UI
 - Metrics dashboard: mini charts for fps, actions_per_s, blocks, stuck_events, decision_latency_ms, etc.
 - Window panel: view/apply emulator client rect (left, top, width, height)
 
-Emulator window alignment (use your screenshot’s rectangle)
+Emulator window alignment (use your screenshot's rectangle)
 - In UI, open Window panel, click Refresh
 - Enter Left/Top/Width/Height that match your emulator in the screenshot
 - Click Apply (window is restored, resized, and set topmost)
 
 Key configuration (copy to .env)
-- Capture/input: CAPTURE_BACKEND, INPUT_BACKEND
-- Window: WINDOW_TITLE_HINT, WINDOW_ENFORCE_TOPMOST, WINDOW_LEFT, WINDOW_TOP, WINDOW_CLIENT_WIDTH, WINDOW_CLIENT_HEIGHT
-- Input scaling: INPUT_BASE_WIDTH, INPUT_BASE_HEIGHT, INPUT_EXCLUDE_BOTTOM_PX
-- OCR: TESSERACT_CMD, OCR_LANGUAGE
-- Stability: DRY_RUN, MAX_CONSEC_ERRORS, ERROR_BACKOFF_S
+- Capture/input: CAPTURE_BACKEND=window, INPUT_BACKEND=window, CAPTURE_FPS=2
+- Window: WINDOW_TITLE_HINT, WINDOW_ENFORCE_TOPMOST, WINDOW_LEFT=82, WINDOW_TOP=80, WINDOW_CLIENT_WIDTH=882, WINDOW_CLIENT_HEIGHT=496
+- Input scaling: INPUT_BASE_WIDTH=882, INPUT_BASE_HEIGHT=496, INPUT_EXCLUDE_BOTTOM_PX=40
+- OCR: TESSERACT_CMD, OCR_LANGUAGE=eng, OCR_SCALE=3.0, OCR_PSM=11, OCR_ENGINES=paddle,tesseract_batched,tesseract
+- Stability: DRY_RUN=false, MAX_CONSEC_ERRORS=5, ERROR_BACKOFF_S=2.0
 - Safety: HARD_BLOCK_IAP, HARD_BLOCK_ITEM_CHANGES
 - Hugging Face: HUGGINGFACE_HUB_TOKEN, HF_MODEL_ID_POLICY, HF_MODEL_ID_JUDGE, HF_INFERENCE_ENDPOINT_URL
+- Reinforcement Learning: RL_ENABLED=true, RL_METHOD=bandit, RL_EPS_START=0.35, RL_EPS_END=0.15
 
 Hugging Face agents (policy/judge)
 - Choose a small CPU-friendly policy to start: TinyLlama/TinyLlama-1.1B-Chat-v1.0
@@ -64,14 +67,14 @@ Hugging Face agents (policy/judge)
   - HF_MODEL_ID_POLICY=TinyLlama/TinyLlama-1.1B-Chat-v1.0
   - HF_MODEL_ID_JUDGE=TinyLlama/TinyLlama-1.1B-Chat-v1.0 (optional)
   - HF_INFERENCE_ENDPOINT_URL=... (optional)
-- Restart backend; UI will show “hf-policy” when active, otherwise “policy-lite”
+- Restart backend; UI will show "hf-policy" when active, otherwise "policy-lite"
 
 How the agent reasons (visible in UI)
-- Capture: screenshot of emulator client area (DPI-aware)
-- OCR: extract text (menu labels, dialogs). Safety rules scan OCR
+- Capture: screenshot of emulator client area (DPI-aware) at 2 FPS
+- OCR: extract text (menu labels, dialogs) with enhanced 3x scale and PSM 11. Safety rules scan OCR
 - Policy: heuristic or HF policy proposes action; judge optional
 - Stuck recovery: when repeated errors or unchanged OCR, the agent runs limited web searches using OCR hints and stores summarized facts to memory
-- Execution: scaled/clamped input sent to emulator (Windows SendInput)
+- Execution: scaled/clamped input sent to emulator (Windows SendInput) with 40px bottom margin exclusion
 - Telemetry: status, steps, decisions, and metrics streamed live to UI
 
 Troubleshooting quick guide

@@ -1,9 +1,14 @@
 # auto-gaming
 
-Status: Stable Beta v1.0.2 (Windows Emulator). OCR ensemble, aggressive RL exploration, clickmap learning, and improved logging/telemetry; memory-first with locked-feature learning.
+Status: Stable Beta v1.0.3 (Windows Emulator). Enhanced OCR configuration (3x scale, PSM 11, multi-engine ensemble), optimized window positioning (882x496), and improved input handling with bottom margin exclusion.
 
 ## Release notes
 
+- v1.0.3
+  - Enhanced OCR configuration: 3x scale, PSM 11, optimized engine order (Paddle first)
+  - Optimized window positioning: 882x496 client area with precise positioning (82,80)
+  - Improved input handling: 40px bottom margin exclusion for taskbar avoidance
+  - Updated capture FPS to 2 for better responsiveness
 - v1.0.2
   - OCR ensemble (Tesseract + Paddle) with configurable engines
   - More aggressive RL exploration (visible-label bandit + stuck boost)
@@ -32,15 +37,16 @@ Status: Stable Beta v1.0.2 (Windows Emulator). OCR ensemble, aggressive RL explo
 - Emulator: "Google Play Games Beta" on Windows (target environment for testing)
 - Capture backend names: `adb` (device screencap), `window` (Windows client-area capture)
 - Input backend names: `adb` (shell input), `window` (Windows SendInput scaled to client area)
-- Window title hint (regex): `WINDOW_TITLE_HINT=Google Play Games|Epic Seven|Epic 7`
+- Window title hint (regex): `WINDOW_TITLE_HINT=Google Play Games|Epic Seven|Epic 7|Epic Seven - FRl3ZD`
 - Window management: "topmost" and fixed client size/position (see `WINDOW_ENFORCE_TOPMOST`, geometry vars)
+- Optimized dimensions: 882x496 client area at position (82,80) for stable capture
 - Agent runner: `AgentRunner` (lifecycle: running/paused/stopped)
 - Policy (heuristic): `policy-lite`
 - Policy (Hugging Face): `hf-policy` (enabled via `HF_MODEL_ID_POLICY`)
 - Judge (Hugging Face): `hf-judge` (enabled via `HF_MODEL_ID_JUDGE`)
 - Safety rules (names): `no-external-navigation`, `no-item-change` (sell/remove/unequip)
 - Stuck recovery: OCR-driven web search + memory enrichment
-  - Windows click safety: set `INPUT_EXCLUDE_BOTTOM_PX` to avoid taskbar/overlay clicks. All taps are clamped to the client area with small margins.
+  - Windows click safety: set `INPUT_EXCLUDE_BOTTOM_PX=40` to avoid taskbar/overlay clicks. All taps are clamped to the client area with small margins.
 - Control endpoints: `/telemetry/control/{start|pause|stop}`; WebSocket: `/telemetry/ws`
 - Key env variables: `CAPTURE_BACKEND`, `INPUT_BACKEND`, `WINDOW_TITLE_HINT`, `HF_MODEL_ID_POLICY`, `HF_MODEL_ID_JUDGE`, `HUGGINGFACE_HUB_TOKEN`
 
@@ -152,7 +158,7 @@ Usage:
 UI dev quickstart:
 
 - `cd ui && pnpm install` (or npm/yarn)
-- `pnpm dev` (proxies to `http://localhost:8000` for `/telemetry`)
+- `pnpm dev` (proxies to `http://localhost:8000` for `/telemetry`, `/analytics`, `/static`)
 
 Controls:
 
@@ -220,7 +226,9 @@ Notes:
 
 - v1.0.0 is a beta. Expect to run primarily on Windows emulator (Google Play Games Beta) and report issues.
 - New safety rules: block external links/programs; block selling/removing heroes or equipment.
-- Stuck recovery: when the agent stalls, it re-evaluates OCR and performs lightweight web search to enrich memory and propose next steps.
+- Stuck recovery: when the agent stalls, it re-evaluates OCR and prefers exploration; it may perform a lightweight web search to enrich memory only when helpful.
+  - Web search is gated: requires meaningful OCR lines, is rate-limited (≥60s cooldown), and deduplicated per OCR fingerprint for 15 minutes to avoid repeating the same query.
+  - After a search on a given OCR fingerprint, the policy increases exploration bias to reinforce learning rather than repeatedly looking up answers.
 
 ### Stretch goals (post‑1.0)
 
@@ -368,26 +376,26 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Collapsible panels and layout presets (compact, detailed)
   - [ ] Decision table filters (agent, type, latency range, errors only)
   - [ ] Sticky mini heads-up strip (FPS, actions/s, blocks, stuck, model)
-  - [ ] One-click actions: Back, Wait(1s), Gentle Swipe (operator shortcuts)
+  - [x] One-click actions: Back, Wait(1s), Gentle Swipe (operator shortcuts)
   - [ ] Memory thumbnails with inline expand and copy-to-clipboard OCR
 
 - v2.0.2
 
-  - [ ] Session replay scrubber (time slider) with frame previews
-  - [ ] Export session trace (JSONL) and frames; Import for replay
+  - [x] Session replay scrubber (time slider) with frame previews
+  - [x] Export session trace (JSONL) and frames; Import for replay
   - [ ] Metrics compare view (last 5 sessions) with deltas
 
 - v2.0.3
 
-  - [ ] Guidance editor (prioritize/avoid templates, presets)
+  - [x] Guidance editor (prioritize/avoid templates, presets)
   - [ ] Doctor panel enhancements (quick fixes, open config, re-run with logs)
 
 - v2.1.0
-  - [ ] Theming (dark/light/system) and accessibility (font size, high contrast)
+  - [x] Theming (dark/light/system) and accessibility (font size, high contrast)
   - [ ] Status toasts and inline error chips (e.g., OCR/decision errors)
-  - [ ] Keyboard shortcuts (Start/Pause/Stop, Refresh, Focus panes)
+  - [x] Keyboard shortcuts (Start/Pause/Stop, Refresh, Focus panes)
   - [ ] Screenshot annotate mode (draw box and copy coords as base-space)
-  - [ ] Model indicator with quick toggle (heuristic/hf-policy) and last error
+  - [x] Model indicator with quick toggle (heuristic/hf-policy) and last error
 
 ### v2.1.1 → v3.0.0 — Learning speed and performance
 
@@ -402,13 +410,14 @@ Focus: reduce end‑to‑end decision latency, improve sample efficiency, and ac
 
 #### v2.1.2 — OCR batching and normalization
 
-- [ ] Batch OCR across tiles; merge results; unify quote/spacing normalization
+- [x] Batch OCR across tiles; merge results; unify quote/spacing normalization
 - [ ] Language pack auto‑verify and fallback to English tokens
 - [ ] Prompt compression for LLM policy (top‑k tokens, dedup lines)
 
 #### v2.2.0 — Retrieval/memory performance
 
-- [ ] Streaming embeddings; lazy re‑index; background compaction
+- [x] Lazy re‑index with incremental FAISS updates; background compaction (planned)
+- [ ] Streaming embeddings
 - [ ] ANN index (FAISS HNSW/IVF) with sharding for >100k facts
 - [ ] Deduplicate facts by semantic similarity; aging/TTL policies
 
@@ -575,7 +584,7 @@ Design notes:
 
 - Backend: Python 3.11, FastAPI, Pydantic v2, Uvicorn, APScheduler
 - Computer vision: OpenCV, NumPy; template matching; optional object detection later
-- OCR: Tesseract + `pytesseract` (or PaddleOCR as an alternative)
+- OCR: Enhanced Tesseract + PaddleOCR ensemble with 3x scale, PSM 11, and multi-engine fallback
 - Knowledge & memory: sentence-transformers embeddings, FAISS/Chroma vector store, SQLite for structured data
 - Planning/learning: metrics-weighted heuristic policy initially; optional RL with Stable-Baselines3 (PPO) later
 - Parallelism/orchestration: Python asyncio, Ray (optional), task queue via Redis/Celery (optional)
@@ -769,12 +778,13 @@ Emulator:
 ### Windows window capture (Google Play Games Beta)
 
 - Set environment variables in `.env` if needed:
-  - `CAPTURE_BACKEND=auto` (default) will try ADB first, then window capture
-  - `CAPTURE_BACKEND=window` forces window capture
-  - `WINDOW_TITLE_HINT=Google Play Games|Epic Seven|Epic 7` can be a regex or simple text to match the emulator window title
+  - `CAPTURE_BACKEND=window` (default) for stable window capture
+  - `CAPTURE_FPS=2` for responsive 2 FPS capture
+  - `WINDOW_TITLE_HINT=Google Play Games|Epic Seven|Epic 7|Epic Seven - FRl3ZD` can be a regex or simple text to match the emulator window title
   - `WINDOW_ENFORCE_TOPMOST=true` keeps the window on top during capture
-  - `WINDOW_LEFT=100`, `WINDOW_TOP=100`, `WINDOW_CLIENT_WIDTH=1280`, `WINDOW_CLIENT_HEIGHT=720` set the fixed position and client-area size
-  - `INPUT_EXCLUDE_BOTTOM_PX=40` (optional) keeps taps above the bottom 40px to avoid taskbar overlaps
+  - `WINDOW_LEFT=82`, `WINDOW_TOP=80`, `WINDOW_CLIENT_WIDTH=882`, `WINDOW_CLIENT_HEIGHT=496` set the optimized position and client-area size
+  - `INPUT_EXCLUDE_BOTTOM_PX=40` keeps taps above the bottom 40px to avoid taskbar overlaps
+  - Enhanced OCR: `OCR_SCALE=3.0`, `OCR_PSM=11`, `OCR_ENGINES=paddle,tesseract_batched,tesseract` for maximum text signal
 - Ensure the emulator window is visible (not minimized) and on any monitor.
 - Usage examples:
   - Capture one frame: `python -m app.cli capture --output-dir captures`

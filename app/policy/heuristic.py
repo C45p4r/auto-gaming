@@ -114,7 +114,8 @@ def _fingerprint(text: str, tokens: list[str] | None = None) -> str:
 
 
 def propose_action(state: GameState) -> tuple[float, object]:
-    global _last_ocr_fingerprint, _repeat_count, _last_choice_idx
+    global _last_selected_label, _last_choice_idx, _label_cooldown, _mode_sufficient, _mode_locked
+    global _last_fingerprint, _last_action_time, _last_action_type, _last_ocr_fingerprint, _repeat_count
     # Reset daily sufficiency flags if a new day
     reset_daily_if_new_day()
     metrics = compute_metrics(state)
@@ -199,7 +200,6 @@ def propose_action(state: GameState) -> tuple[float, object]:
                 cy = b.y + b.h // 2
                 x = int(cx / state.img_width * base_w)
                 y = int(cy / state.img_height * base_h)
-                global _last_selected_label
                 _last_selected_label = b.label
                 return score, TapAction(x=x, y=y)
     # As a last resort, sample likely icon anchors even if OCR did not see text
@@ -246,7 +246,6 @@ def propose_action(state: GameState) -> tuple[float, object]:
         # Decay existing cooldowns
         for k in list(_label_cooldown.keys()):
             _label_cooldown[k] = max(0, _label_cooldown[k] - 1)
-        global _last_selected_label
         _last_selected_label = name
         return score, TapAction(x=x, y=y)
 

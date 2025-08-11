@@ -8,44 +8,45 @@ class Settings(BaseSettings):
     app_name: str = Field(default="auto-gaming", alias="APP_NAME")
     environment: str = Field(default="dev", alias="ENVIRONMENT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    logs_dir: str = Field(default="logs", alias="LOGS_DIR")
 
-    # OCR
+    # OCR (maximize text signal)
     ocr_language: str = Field(default="eng", alias="OCR_LANGUAGE")
-    tesseract_cmd: str | None = Field(default=None, alias="TESSERACT_CMD")
-    ocr_preprocess: str = Field(default="auto", alias="OCR_PREPROCESS")  # none|grayscale|binary|auto
-    ocr_scale: float = Field(default=1.5, alias="OCR_SCALE")
-    ocr_psm: int = Field(default=6, alias="OCR_PSM")
+    tesseract_cmd: str | None = Field(default="C:\\Program Files\\Tesseract-OCR\\tesseract.exe", alias="TESSERACT_CMD")
+    ocr_preprocess: str = Field(default="sharpness", alias="OCR_PREPROCESS")  # none|grayscale|binary|auto|sharpness
+    ocr_scale: float = Field(default=2.0, alias="OCR_SCALE")
+    ocr_psm: int = Field(default=7, alias="OCR_PSM")
     ocr_oem: int = Field(default=3, alias="OCR_OEM")
     ocr_multi_pass: bool = Field(default=True, alias="OCR_MULTI_PASS")
     ocr_ensemble: bool = Field(default=True, alias="OCR_ENSEMBLE")
-    ocr_engines: str = Field(default="tesseract,tesseract_batched,paddle", alias="OCR_ENGINES")
+    ocr_engines: str = Field(default="paddle,tesseract_batched,tesseract", alias="OCR_ENGINES")
 
     # Emulator / ADB
     adb_path: str = Field(default="adb", alias="ADB_PATH")
 
-    # Capture
-    capture_fps: float = Field(default=1.0, alias="CAPTURE_FPS")
+    # Capture / Window (stable, user-specified position and size)
+    capture_fps: float = Field(default=2.0, alias="CAPTURE_FPS")
     capture_backend: str | None = Field(
-        default=None, alias="CAPTURE_BACKEND"
+        default="window", alias="CAPTURE_BACKEND"
     )  # "auto" | "adb" | "window"
     window_title_hint: str | None = Field(
-        default=r"Google Play Games|Epic Seven|Epic 7", alias="WINDOW_TITLE_HINT"
+        default=r"Google Play Games|Epic Seven|Epic 7|Epic Seven - FRl3ZD", alias="WINDOW_TITLE_HINT"
     )
     window_force_foreground: bool = Field(default=True, alias="WINDOW_FORCE_FOREGROUND")
     window_enforce_topmost: bool = Field(default=True, alias="WINDOW_ENFORCE_TOPMOST")
-    window_left: int = Field(default=100, alias="WINDOW_LEFT")
-    window_top: int = Field(default=100, alias="WINDOW_TOP")
-    window_client_width: int = Field(default=1280, alias="WINDOW_CLIENT_WIDTH")
-    window_client_height: int = Field(default=720, alias="WINDOW_CLIENT_HEIGHT")
-    # Exclude a bottom margin from tap targets to avoid taskbar if overlapping (pixels)
-    input_exclude_bottom_px: int = Field(default=0, alias="INPUT_EXCLUDE_BOTTOM_PX")
+    window_left: int = Field(default=82, alias="WINDOW_LEFT")
+    window_top: int = Field(default=80, alias="WINDOW_TOP")
+    window_client_width: int = Field(default=882, alias="WINDOW_CLIENT_WIDTH")
+    window_client_height: int = Field(default=496, alias="WINDOW_CLIENT_HEIGHT")
 
-    # Input
+    # Input (enable real taps; base coords must match client area)
     input_backend: str | None = Field(
-        default=None, alias="INPUT_BACKEND"
+        default="window", alias="INPUT_BACKEND"
     )  # "auto" | "adb" | "window"
-    input_base_width: int = Field(default=1080, alias="INPUT_BASE_WIDTH")
-    input_base_height: int = Field(default=1920, alias="INPUT_BASE_HEIGHT")
+    input_base_width: int = Field(default=882, alias="INPUT_BASE_WIDTH")
+    input_base_height: int = Field(default=496, alias="INPUT_BASE_HEIGHT")
+    # Exclude a bottom margin from tap targets to avoid taskbar if overlapping (pixels)
+    input_exclude_bottom_px: int = Field(default=40, alias="INPUT_EXCLUDE_BOTTOM_PX")
 
     # Parallelism
     parallel_mode: str = Field(default="async", alias="PARALLEL_MODE")  # "async" | "ray"
@@ -54,8 +55,6 @@ class Settings(BaseSettings):
     debate_rounds: int = Field(default=1, alias="DEBATE_ROUNDS")
 
     # Logging
-    logs_dir: str = Field(default="logs", alias="LOGS_DIR")
-    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     log_to_ws: bool = Field(default=True, alias="LOG_TO_WS")
     log_ring_size: int = Field(default=1000, alias="LOG_RING_SIZE")
 
@@ -92,7 +91,7 @@ class Settings(BaseSettings):
     rl_enabled: bool = Field(default=True, alias="RL_ENABLED")
     rl_method: str = Field(default="bandit", alias="RL_METHOD")  # bandit|off
     rl_eps_start: float = Field(default=0.35, alias="RL_EPS_START")
-    rl_eps_end: float = Field(default=0.10, alias="RL_EPS_END")
+    rl_eps_end: float = Field(default=0.15, alias="RL_EPS_END")
     rl_persist_path: str = Field(default="data/policy.json", alias="RL_PERSIST_PATH")
 
 

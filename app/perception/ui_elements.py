@@ -3,7 +3,7 @@ from typing import List, Sequence
 from PIL import Image
 
 # Heuristic UI button detector using normalized anchor positions
-# Anchors are based on 1280x720 Epic7 lobby layout; we scale to current image size
+# Anchors are based on 882x496 Epic7 lobby layout; we scale to current image size
 
 
 @dataclass(frozen=True)

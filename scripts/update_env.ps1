@@ -14,16 +14,25 @@ $content = Get-Content -Raw -ErrorAction SilentlyContinue $EnvFile
 if ($null -eq $content) { $content = "" }
 
 $kv = @{
-  "CAPTURE_BACKEND"        = "auto";
-  "INPUT_BACKEND"          = "auto";
-  "WINDOW_TITLE_HINT"      = "Epic\s*Seven|FRI3ZD";
+  "CAPTURE_BACKEND"        = "window";
+  "INPUT_BACKEND"          = "window";
+  "WINDOW_TITLE_HINT"      = "Google Play Games|Epic Seven|Epic 7|Epic Seven - FRl3ZD";
   "WINDOW_ENFORCE_TOPMOST" = "true";
-  "WINDOW_LEFT"            = "100";
-  "WINDOW_TOP"             = "100";
-  "WINDOW_CLIENT_WIDTH"    = "1280";
-  "WINDOW_CLIENT_HEIGHT"   = "720";
-  "INPUT_BASE_WIDTH"       = "1280";
-  "INPUT_BASE_HEIGHT"      = "720";
+  "WINDOW_LEFT"            = "82";
+  "WINDOW_TOP"             = "80";
+  "WINDOW_CLIENT_WIDTH"    = "882";
+  "WINDOW_CLIENT_HEIGHT"   = "496";
+  "INPUT_BASE_WIDTH"       = "882";
+  "INPUT_BASE_HEIGHT"      = "496";
+  "INPUT_EXCLUDE_BOTTOM_PX"= "40";
+  "CAPTURE_FPS"            = "2";
+  "OCR_SCALE"              = "3.0";
+  "OCR_PSM"                = "11";
+  "OCR_ENGINES"            = "paddle,tesseract_batched,tesseract";
+  "RL_ENABLED"             = "true";
+  "RL_METHOD"              = "bandit";
+  "RL_EPS_START"           = "0.35";
+  "RL_EPS_END"             = "0.15";
 }
 
 foreach ($k in $kv.Keys) {
