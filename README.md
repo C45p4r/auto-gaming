@@ -160,7 +160,7 @@ Config:
 - [x] Orchestrator (async/Ray) with time‑boxed tasks
 - [x] Specialist agents (policy‑lite, guide‑reader, mechanics‑expert)
 - [x] Judge/critic with consensus selection
-- [ ] Result caching keyed by state hash
+- [x] Result caching keyed by state hash
 - [x] Concurrency controls (max agents, CPU/GPU budget)
 
 Config:
@@ -204,10 +204,44 @@ Notes:
 
 ### Stretch goals (post‑1.0)
 
+Roadmap items below are broken down into concrete tasks with test and safety criteria. Items may ship incrementally across v2.x.
+
 - [ ] RL policy (PPO) trained on offline logs and safe online finetuning
+  - [x] Bandit baseline (epsilon‑greedy) influencing exploration
+  - [ ] Session export → dataset builder (state_hash, OCR, action, reward proxy)
+  - [ ] Offline PPO training script (CPU‑friendly; reproducible seeds)
+  - [ ] Safety wrapper (reject unsafe actions; masked action space)
+  - [ ] Eval harness (A/B vs. heuristic; report win rate, stuck rate, blocks)
+  - [ ] Inference integration (feature vector, action logits → Action)
+  - [ ] Config flags: `RL_METHOD=ppo`, `PPO_MODEL_PATH`, `RL_SAFE_MASK=true`
+
 - [ ] Object detection for UI components beyond OCR
+  - [ ] Dataset: label buttons/anchors (bbox + label) from saved frames
+  - [ ] Tiny model selection (e.g., YOLOv5n/tiny, ONNX/DirectML for Windows)
+  - [ ] Inference pipeline + fusion with OCR (vote by confidence)
+  - [ ] Golden tests: detector recall ≥90% on common buttons; latency budget ≤30 ms
+  - [ ] Fallback: OCR‑only path when detector unavailable
+  - [ ] Config: `DETECTOR_ENABLED`, `DETECTOR_MODEL_PATH`, thresholds
+
 - [ ] Multi‑device support; Windows/Linux hosts
+  - [ ] Abstract capture/input adapters (ADB, Windows window, X11/Wayland)
+  - [ ] DPI/scale conformance tests per backend (golden click landing)
+  - [ ] Linux capture/input implementation and docs
+  - [ ] Device selection UI + backend enumeration endpoints
+  - [ ] Packaging/scripts for each OS
+
 - [ ] Scenario editor for custom task graphs
+  - [ ] JSON schema for scenarios (nodes=steps, edges=conditions)
+  - [ ] UI editor (create/edit/validate scenarios)
+  - [ ] Runner to execute a scenario with pre/post checks
+  - [ ] Golden scenarios (daily, farming, arena) with success criteria
+  - [ ] Import/export from UI; validation endpoint
+
+Definition of done (per item):
+
+- Automated tests pass (unit + golden + integration as applicable)
+- Safety maintained (no IAP/external navigation; item change blocked)
+- Docs updated (README, config, UI screenshots)
 
 ### Post‑1.0 plan to v2.0 — Tests, fixes, and full functionality
 
