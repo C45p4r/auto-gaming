@@ -321,6 +321,66 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
   - [ ] Screenshot annotate mode (draw box and copy coords as base-space)
   - [ ] Model indicator with quick toggle (heuristic/hf-policy) and last error
 
+### v2.1.1 → v3.0.0 — Learning speed and performance
+
+Focus: reduce end‑to‑end decision latency, improve sample efficiency, and accelerate learning from logs while preserving safety.
+
+#### v2.1.1 — Perception pipeline throughput
+- [ ] Frame diff skip: bypass OCR/encode when screen unchanged beyond threshold
+- [ ] Downscale+ROI OCR pass (fast path) with selective full‑res fallback
+- [ ] Parallelize capture→OCR→encode with bounded queues (prefetch next frame)
+- [ ] Cache normalized OCR (text + bbox) keyed by frame hash
+
+#### v2.1.2 — OCR batching and normalization
+- [ ] Batch OCR across tiles; merge results; unify quote/spacing normalization
+- [ ] Language pack auto‑verify and fallback to English tokens
+- [ ] Prompt compression for LLM policy (top‑k tokens, dedup lines)
+
+#### v2.2.0 — Retrieval/memory performance
+- [ ] Streaming embeddings; lazy re‑index; background compaction
+- [ ] ANN index (FAISS HNSW/IVF) with sharding for >100k facts
+- [ ] Deduplicate facts by semantic similarity; aging/TTL policies
+
+#### v2.3.0 — Policy speedups and serving
+- [ ] Distilled lightweight policy (1–3B) for default decisions
+- [ ] Quantization (int8/int4) and ONNX/TensorRT/DirectML backends
+- [ ] Response caching: (state_hash → action) with TTL + accuracy guard
+- [ ] Multi‑worker model server with micro‑batching
+
+#### v2.4.0 — Learn from logs (offline RL/BC)
+- [ ] Session log export → dataset builder (state, action, reward proxy)
+- [ ] Behavior Cloning baseline; evaluate vs. heuristic
+- [ ] Safety‑aware reward shaping; guard against unsafe actions
+
+#### v2.5.0 — Goal conditioning and curriculum
+- [ ] Condition policy on user goals (Suggestions/Guidance) and progress metrics
+- [ ] Curriculum scheduler: start with safe menus → battles → events
+- [ ] Auto‑tuning exploration parameters based on stuck/blocks rate
+
+#### v2.6.0 — Fast targeting cues
+- [ ] Lightweight detector (tiny/NNAPI/DirectML) for common buttons/anchors
+- [ ] Hybrid targeter: OCR+detector fusion with confidence gating
+
+#### v2.7.0 — Stuck detection and recovery
+- [ ] Visual similarity (SSIM/LPIPS) + OCR fingerprints for robust stuck signal
+- [ ] Dynamic backoff scheduler (exponential wait/back/sweep patterns)
+- [ ] Recovery outcome metrics and A/B of strategies
+
+#### v2.8.0 — Concurrency tuning and prefetch
+- [ ] Asynchronous multi‑agent with micro‑batches
+- [ ] Prefetch next frame and retrieval while executing current action
+- [ ] Adaptive FPS and policy timeout based on device load
+
+#### v2.9.0 — Hardware acceleration
+- [ ] Optional GPU/DirectML for OCR/NN; auto‑detect and enable when safe
+- [ ] Mixed precision where applicable; fall back to CPU deterministically
+
+#### v3.0.0 — Performance release
+- [ ] Decision p50 ≤ 150 ms; p95 ≤ 400 ms on baseline CPU
+- [ ] Sample efficiency: reach defined goals (e.g., clear X menus) in Y minutes
+- [ ] Robust to DPI/scales (100/125/150%) and window states
+- [ ] Safety and guardrail parity maintained; tests and docs updated
+
 Definition of Done per version:
 
 - Major features and all listed checkboxes are completed and tested
