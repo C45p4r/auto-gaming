@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from PIL import Image
 
-from app.services.ocr.tesseract_adapter import run_ocr
+from app.services.ocr import run_ocr_ensemble
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class ParsedText:
 
 
 def ocr_lines(image: Image.Image) -> ParsedText:
-    text = run_ocr(image)
+    text = run_ocr_ensemble(image)
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     tokens: list[str] = []
     for ln in lines:

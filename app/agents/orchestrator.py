@@ -111,40 +111,16 @@ async def orchestrate(state: GameState) -> Candidate:
         query = " ".join(hints[:2]) or ("|".join(state.ocr_tokens[:6]) if state.ocr_tokens else "")
         mem_prefer: set[str] = set()
         mem_discourage: set[str] = set()
+        facts: list[Fact] = []
         if query:
-            facts = store.search(query, top_k=5)
-            await bus.publish_step("memory:search", {"query": query[:120], "top": [f.title for f in facts[:3]]})
-            if not facts:
-                # quick web enrichment: try a couple of curated URLs and the search results page
-                try:
-                    qwords = (state.ocr_tokens or [])[:5]
-                    q = "Epic Seven " + " ".join(qwords)
-                    seeds = [
-                        f"https://duckduckgo.com/html/?q={q}",
-                        f"https://www.google.com/search?q={q}",
-                    ]
-                    docs = fetch_urls(seeds)[:2]
-                    new_facts = [Fact(id=None, title=d.title, source_url=d.url, summary=summarize(d)) for d in docs]
-                    if new_facts:
-                        store.add_facts(new_facts)
-                        await bus.publish_step("memory:web:add", {"added": [f.title for f in new_facts]})
-                        # refresh facts for preference signals
-                        facts = store.search(query, top_k=5)
-                except Exception:
-                    pass
-            else:
-                for f in facts:
-                    tl = f.title.lower()
-                    summ = f.summary.lower()
-                    # Prefer references to general progression menus
-                    for lbl in ("episode", "side story", "battle", "shop", "summon", "event", "sanctuary", "hunt", "arena"):
-                        if lbl in tl or lbl in summ:
-                            if any(s in summ for s in ("locked", "unlock after", "you can enter after")):
-                                mem_discourage.add(lbl)
-                            else:
-                                mem_prefer.add(lbl)
+            # Run memory search in parallel with agent proposals
+            mem_task = asyncio.to_thread(store.search, query, 5)
+        else:
+            mem_task = None
+        # We will await mem_task below after proposals are started
     except Exception:
-        pass
+        mem_task = None  # type: ignore
+        mem_prefer, mem_discourage = set(), set()
     def _infer_label_from_action(action: object) -> str | None:
         try:
             if hasattr(state, "ui_buttons") and state.ui_buttons and hasattr(action, "x") and hasattr(action, "y") and state.img_width and state.img_height:
@@ -175,10 +151,44 @@ async def orchestrate(state: GameState) -> Candidate:
     round_candidates: list[Candidate] = []
     for _ in range(max(1, settings.debate_rounds)):
         tasks = [run_with_timeout(fn, settings.agent_timeout_s) for fn in agents]
-        results = await asyncio.gather(*tasks)
+        # Await candidates and, if present, memory results concurrently
+        if mem_task is not None:
+            results, facts = await asyncio.gather(asyncio.gather(*tasks), mem_task)
+            await bus.publish_step("memory:search", {"query": (query or "")[:120], "top": [f.title for f in facts[:3]]})
+            if not facts and query:
+                # Try web enrichment without blocking too long
+                try:
+                    qwords = (state.ocr_tokens or [])[:5]
+                    q = "Epic Seven " + " ".join(qwords)
+                    seeds = [
+                        f"https://duckduckgo.com/html/?q={q}",
+                        f"https://www.google.com/search?q={q}",
+                    ]
+                    new_docs = await asyncio.to_thread(fetch_urls, seeds)
+                    new_facts = [Fact(id=None, title=d.title, source_url=d.url, summary=summarize(d)) for d in new_docs[:2]]
+                    if new_facts:
+                        store.add_facts(new_facts)
+                        await bus.publish_step("memory:web:add", {"added": [f.title for f in new_facts]})
+                        facts = store.search(query, top_k=5)
+                except Exception:
+                    pass
+        else:
+            results = await asyncio.gather(*tasks)
         candidates = [r for r in results if r is not None]
         # Adjust scores based on memory-derived preferences
         adjusted: list[Candidate] = []
+        try:
+            for f in facts:
+                tl = f.title.lower()
+                summ = f.summary.lower()
+                for lbl in ("episode", "side story", "battle", "shop", "summon", "event", "sanctuary", "hunt", "arena"):
+                    if lbl in tl or lbl in summ:
+                        if any(s in summ for s in ("locked", "unlock after", "you can enter after")):
+                            mem_discourage.add(lbl)
+                        else:
+                            mem_prefer.add(lbl)
+        except Exception:
+            pass
         for sc, act, who in candidates:
             lbl = _infer_label_from_action(act)
             bonus = 0.0

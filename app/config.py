@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     ocr_psm: int = Field(default=6, alias="OCR_PSM")
     ocr_oem: int = Field(default=3, alias="OCR_OEM")
     ocr_multi_pass: bool = Field(default=True, alias="OCR_MULTI_PASS")
+    ocr_ensemble: bool = Field(default=True, alias="OCR_ENSEMBLE")
+    ocr_engines: str = Field(default="tesseract,tesseract_batched,paddle", alias="OCR_ENGINES")
 
     # Emulator / ADB
     adb_path: str = Field(default="adb", alias="ADB_PATH")
