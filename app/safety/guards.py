@@ -93,6 +93,27 @@ def detect_item_change_text(text: str) -> bool:
     return any(term in compact for term in ITEM_CHANGE_COMPACT)
 
 
+# Locked/Unavailable feature detection (e.g., Arena locked until chapter)
+LOCKED_TERMS: set[str] = {
+    "rookie arena",
+    "arena locked",
+    "unlock after",
+    "unlocked after",
+    "requires completion",
+    "complete chapter",
+    "clear stage",
+}
+LOCKED_COMPACT: set[str] = {t.replace(" ", "") for t in LOCKED_TERMS}
+
+
+def detect_locked_feature_text(text: str) -> bool:
+    t = (text or "").lower()
+    if any(term in t for term in LOCKED_TERMS):
+        return True
+    compact = "".join(ch for ch in t if ch.isalnum())
+    return any(term in compact for term in LOCKED_COMPACT)
+
+
 def screen_change(prev: Image.Image, cur: Image.Image, diff_threshold: float = 0.10) -> bool:
     if prev.size != cur.size:
         return True

@@ -654,7 +654,8 @@ Backend (FastAPI):
 UI (React/TypeScript):
 
 1. `cd ui && pnpm install` (or npm/yarn).
-2. `pnpm dev` to start the UI; it connects to the backend via WebSocket/REST.
+2. If Sass preprocessor error occurs, run `npm i -D sass-embedded` (or `pnpm add -D sass-embedded`).
+3. `pnpm dev` to start the UI; it connects to the backend via WebSocket/REST.
 
 Emulator:
 
