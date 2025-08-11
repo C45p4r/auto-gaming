@@ -99,6 +99,36 @@ def agent_guide_reader(state: GameState) -> Candidate:
     return score * 0.98, action, "guide-reader"
 
 
+def agent_icons(state: GameState) -> Candidate:
+    # Prefer tapping on visible UI icons/buttons, filtered by lock, ranked by clickmap score
+    try:
+        if getattr(state, "ui_buttons", None) and state.img_width and state.img_height:
+            candidates: list[tuple[float, int, int]] = []
+            for b in state.ui_buttons:
+                if not getattr(b, "label", None):
+                    continue
+                if is_mode_locked(b.label):
+                    continue
+                cx = b.x + b.w // 2
+                cy = b.y + b.h // 2
+                # convert to base coords
+                bx = int(cx / state.img_width * int(settings.input_base_width))
+                by = int(cy / state.img_height * int(settings.input_base_height))
+                s = click_score(bx, by, radius_cells=1)
+                candidates.append((s, bx, by))
+            if candidates:
+                candidates.sort(reverse=True, key=lambda t: t[0])
+                best_s, bx, by = candidates[0]
+                from app.actions.types import TapAction
+                # modest score base, boosted by clickmap confidence
+                return 0.55 + (best_s - 0.5) * 0.3, TapAction(x=bx, y=by), "icon-prior"
+    except Exception:
+        pass
+    # Fallback to heuristic if no buttons
+    score, action = propose_action(state)
+    return score * 0.97, action, "icon-fallback"
+
+
 def vote(candidates: list[Candidate]) -> Candidate:
     # If HF judge is configured, defer selection
     if settings.hf_model_id_judge:
@@ -156,6 +186,7 @@ async def orchestrate(state: GameState) -> Candidate:
 
     agents: list[Callable[[], Candidate]] = [
         lambda: agent_policy(state),
+        lambda: agent_icons(state),
         lambda: agent_mechanics(state),
         lambda: agent_guide_reader(state),
     ][: settings.max_agents]
