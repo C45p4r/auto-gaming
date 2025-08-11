@@ -6,6 +6,7 @@ from collections.abc import Callable
 from app.config import settings
 from app.policy.heuristic import propose_action
 from app.perception.clickmap import click_score, suggest_explore_points
+from app.perception.interaction_memory import element_score
 from app.config import settings
 from app.services.hf.policy import HFPolicy
 from app.services.hf.judge import HFJudge
@@ -52,7 +53,7 @@ def agent_policy(state: GameState) -> Candidate:
             pass
     # Fallback to heuristic
     score, action = propose_action(state)
-    # Adjust score using clickmap knowledge: boost likely-buttons, nudge unknowns, penalize static
+    # Adjust score using clickmap and element memory: boost likely-buttons/interactive labels
     try:
         if hasattr(action, "x") and hasattr(action, "y"):
             ax = int(getattr(action, "x"))
@@ -60,6 +61,21 @@ def agent_policy(state: GameState) -> Candidate:
             s = click_score(ax, ay, radius_cells=1)
             # Map score in [0,1] to adjustment around 0: unknown ~0.5 => ~0 bonus
             adj = (s - 0.5) * 0.2  # ±0.1 max
+            # If nearest UI label known as interactive, add a small bonus
+            if getattr(state, "ui_buttons", None) and state.img_width and state.img_height:
+                ix = int(ax / max(1, int(settings.input_base_width)) * state.img_width)
+                iy = int(ay / max(1, int(settings.input_base_height)) * state.img_height)
+                best_d = 1e9
+                lbl = None
+                for b in state.ui_buttons:
+                    cx = b.x + b.w // 2
+                    cy = b.y + b.h // 2
+                    d = (cx - ix) ** 2 + (cy - iy) ** 2
+                    if d < best_d:
+                        best_d = d
+                        lbl = b.label
+                if lbl:
+                    adj += (element_score(lbl) - 0.5) * 0.2
             score = float(score) + adj
     except Exception:
         pass

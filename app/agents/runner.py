@@ -38,6 +38,7 @@ from app.policy.bandit import ContextualBandit
 from app.analytics.metrics import compute_reward
 from app.perception.ui_elements import detect_ui_buttons
 from app.perception.clickmap import record_tap_outcome, click_score, suggest_explore_points
+from app.perception.interaction_memory import record_element_interaction
 
 
 RunState = Literal["idle", "running", "paused", "stopped"]
@@ -499,6 +500,24 @@ class AgentRunner:
                         ax = int(getattr(action, "x", 0))
                         ay = int(getattr(action, "y", 0))
                         record_tap_outcome(ax, ay, changed)
+                        # If tapped near a known UI button, record element interaction as well
+                        try:
+                            if getattr(state, "ui_buttons", None) and state.img_width and state.img_height:
+                                ix = int(ax / max(1, int(settings.input_base_width)) * state.img_width)
+                                iy = int(ay / max(1, int(settings.input_base_height)) * state.img_height)
+                                closest = None
+                                best_d = 1e9
+                                for b in state.ui_buttons:
+                                    cx = b.x + b.w // 2
+                                    cy = b.y + b.h // 2
+                                    d = (cx - ix) ** 2 + (cy - iy) ** 2
+                                    if d < best_d:
+                                        best_d = d
+                                        closest = b
+                                if closest and getattr(closest, "label", None):
+                                    record_element_interaction(closest.label, changed)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
                 # Backup/retry mechanic on repeated identical state+action
