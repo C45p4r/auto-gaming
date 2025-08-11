@@ -135,6 +135,25 @@ def agent_icons(state: GameState) -> Candidate:
             if candidates:
                 candidates.sort(reverse=True, key=lambda t: t[0])
                 best_s, bx, by = candidates[0]
+                
+                # STUCK DETECTION: Check if we're clicking the same spot repeatedly
+                global _last_icon_coords, _icon_repeat_count
+                if '_last_icon_coords' not in globals():
+                    _last_icon_coords = None
+                    _icon_repeat_count = 0
+                
+                current_coords = (bx, by)
+                if _last_icon_coords == current_coords:
+                    _icon_repeat_count += 1
+                else:
+                    _icon_repeat_count = 0
+                _last_icon_coords = current_coords
+                
+                # If stuck on same coordinates for 3+ times, force fallback to heuristic
+                if _icon_repeat_count >= 3:
+                    score, action = propose_action(state)
+                    return score * 0.95, action, "icon-stuck-fallback"
+                
                 from app.actions.types import TapAction
                 # modest score base, boosted by clickmap confidence
                 return 0.55 + (best_s - 0.5) * 0.3, TapAction(x=bx, y=by), "icon-prior"
@@ -201,10 +220,10 @@ async def orchestrate(state: GameState) -> Candidate:
         return None
 
     agents: list[Callable[[], Candidate]] = [
-        lambda: agent_policy(state),
-        lambda: agent_icons(state),
-        lambda: agent_mechanics(state),
-        lambda: agent_guide_reader(state),
+        lambda: agent_policy(state),  # Heuristic policy first - most intelligent
+        lambda: agent_mechanics(state),  # Mechanics second - different reasoning
+        lambda: agent_guide_reader(state),  # Guide reader third - contextual help
+        lambda: agent_icons(state),  # Icon-prior last - only as fallback
     ][: settings.max_agents]
 
     round_candidates: list[Candidate] = []

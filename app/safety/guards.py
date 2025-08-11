@@ -86,11 +86,40 @@ ITEM_CHANGE_COMPACT: set[str] = {t.replace(" ", "") for t in ITEM_CHANGE_TERMS}
 
 
 def detect_item_change_text(text: str) -> bool:
+    """Detect if text suggests dangerous item modification actions.
+    
+    This function is more conservative - it looks for specific dangerous patterns
+    rather than just the presence of certain words, to avoid false positives
+    from OCR reading general game text.
+    """
+    if not text:
+        return False
+    
     t = text.lower()
-    if any(term in t for term in ITEM_CHANGE_TERMS):
+    
+    # Look for specific dangerous patterns, not just word presence
+    dangerous_patterns = [
+        "sell this", "sell item", "sell hero", "sell equipment",
+        "discard this", "discard item", "discard hero", "discard equipment", 
+        "dismantle this", "dismantle item", "dismantle hero", "dismantle equipment",
+        "remove equipment now", "unequip now", "dismiss hero now", "retire hero now",
+        "enhance using", "enhance with", "enhance hero", "enhance equipment"
+    ]
+    
+    # Check for dangerous patterns
+    if any(pattern in t for pattern in dangerous_patterns):
         return True
+    
+    # Also check for compact versions (no spaces) to handle OCR quirks
     compact = "".join(ch for ch in t if ch.isalnum())
-    return any(term in compact for term in ITEM_CHANGE_COMPACT)
+    dangerous_compact = [
+        "sellthis", "sellitem", "sellhero", "sellequipment",
+        "discardthis", "discarditem", "discardhero", "discardequipment",
+        "dismantlethis", "dismantleitem", "dismantlehero", "dismantleequipment",
+        "removeequipmentnow", "unequipnow", "dismissheronow", "retireheronow"
+    ]
+    
+    return any(pattern in compact for pattern in dangerous_compact)
 
 
 # Locked/Unavailable feature detection (e.g., Arena locked until chapter)

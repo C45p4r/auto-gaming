@@ -40,3 +40,12 @@ dist/
 .env.*
 # Mac
 .DS_Store
+
+# Logs and runtime artifacts
+logs/
+backend.log
+ui.log
+ui_*.log
+ui/*.log
+static/frames/*.png
+static/frames/*.json

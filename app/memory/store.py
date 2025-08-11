@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import sqlite3
 from collections.abc import Sequence
+import threading
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterator
 
 import faiss
 import numpy as np
@@ -24,53 +26,86 @@ class MemoryStore:
     def __init__(self, db_path: str | None = None) -> None:
         self.db_path = db_path or settings.db_path
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(self.db_path)
-        self._conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS facts (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              title TEXT NOT NULL,
-              source_url TEXT NOT NULL,
-              summary TEXT NOT NULL
-            );
-            """
-        )
-        self._conn.commit()
+        # Initialize schema once (use short-lived connection)
+        with sqlite3.connect(self.db_path, check_same_thread=False) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS facts (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  title TEXT NOT NULL,
+                  source_url TEXT NOT NULL,
+                  summary TEXT NOT NULL
+                );
+                """
+            )
+            conn.commit()
 
+        # Serialize sqlite access across threads
+        self._lock = threading.Lock()
+        # Lazy components for embeddings/index
         self._embedder: SentenceTransformer | None = None
         self._index: faiss.IndexFlatIP | None = None
         self._embeddings: np.ndarray | None = None
         # Cached rows: (id, title, source_url, summary)
         self._rows: list[tuple[int, str, str, str]] | None = None
 
+    def _connect(self) -> sqlite3.Connection:
+        # Return a new connection for the current thread; caller must close or use context manager
+        return sqlite3.connect(self.db_path, check_same_thread=False)
+
     def add_facts(self, facts: Sequence[Fact]) -> list[int]:
-        cur = self._conn.cursor()
         ids: list[int] = []
-        for f in facts:
-            cur.execute(
-                "INSERT INTO facts (title, source_url, summary) VALUES (?, ?, ?)",
-                (f.title, f.source_url, f.summary),
-            )
-            last_id = cur.lastrowid
-            if isinstance(last_id, int):
-                ids.append(last_id)
+        with self._lock:
+            with self._connect() as conn:
+                cur = conn.cursor()
+                for f in facts:
+                    cur.execute(
+                        "INSERT INTO facts (title, source_url, summary) VALUES (?, ?, ?)",
+                        (f.title, f.source_url, f.summary),
+                    )
+                    last_id = cur.lastrowid
+                    if isinstance(last_id, int):
+                        ids.append(last_id)
+                    else:
+                        raise RuntimeError("Failed to obtain lastrowid from SQLite insert")
+                conn.commit()
+            # If index is already built, update incrementally to avoid expensive full rebuilds
+            if self._index is not None and self._embeddings is not None and self._rows is not None and len(ids) == len(facts):
+                try:
+                    embedder = self._get_embedder()
+                    corpus_new = [f"{f.title}. {f.summary}" for f in facts]
+                    embs_new = embedder.encode(corpus_new, normalize_embeddings=True)
+                    import numpy as _np
+                    vecs_new = _np.asarray(embs_new, dtype="float32")
+                    # Append to in-memory rows and embeddings
+                    self._rows.extend([(i, f.title, f.source_url, f.summary) for i, f in zip(ids, facts)])
+                    self._embeddings = _np.vstack([self._embeddings, vecs_new]) if self._embeddings.size else vecs_new
+                    # Add to FAISS index
+                    self._index.add(vecs_new)
+                    return ids
+                except Exception:
+                    # Fallback to lazy rebuild on next search
+                    self._index = None
+                    self._embeddings = None
+                    self._rows = None
+                    return ids
             else:
-                raise RuntimeError("Failed to obtain lastrowid from SQLite insert")
-        self._conn.commit()
-        # refresh index lazily
-        self._index = None
-        self._embeddings = None
-        self._rows = None
-        return ids
+                # No existing index: trigger lazy rebuild on next search
+                self._index = None
+                self._embeddings = None
+                self._rows = None
+                return ids
 
     def _ensure_index(self) -> None:
         if self._index is not None and self._embeddings is not None and self._rows is not None:
             return
-        rows_full = list(
-            self._conn.execute(
-                "SELECT id, title, source_url, summary FROM facts ORDER BY id ASC"
-            ).fetchall()
-        )
+        with self._lock:
+            with self._connect() as conn:
+                rows_full = list(
+                    conn.execute(
+                        "SELECT id, title, source_url, summary FROM facts ORDER BY id ASC"
+                    ).fetchall()
+                )
         self._rows = rows_full
         if not rows_full:
             self._index = faiss.IndexFlatIP(384)

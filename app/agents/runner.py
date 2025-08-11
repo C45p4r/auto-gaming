@@ -55,6 +55,9 @@ class AgentRunner:
         self._did_initial_enforce: bool = False
         self._last_ocr_fp: str | None = None
         self._unchanged_count: int = 0
+        self._last_web_search_ts: float = 0.0
+        self._recent_search_ocr_fp: dict[str, float] = {}
+        self._search_dedupe_window_s: float = 900.0  # 15 minutes per OCR fingerprint
         # counters for UI stats
         self._frames: int = 0
         self._actions: int = 0
@@ -250,23 +253,39 @@ class AgentRunner:
                         metrics_store.add_point("blocks", float(self._blocks))
                     except Exception:
                         pass
-                    await bus.publish_status(
-                        task="blocked_item_change",
-                        confidence=None,
-                        next_step="BackAction",
-                        extra=self._stats_extra(),
-                    )
-                    if not settings.dry_run:
-                        from app.actions.types import BackAction
+                    
+                    # Add timeout mechanism: if blocked for too long, allow exploration
+                    block_timeout = 30.0  # 30 seconds
+                    if hasattr(self, '_last_block_ts') and (time.perf_counter() - self._last_block_ts) > block_timeout:
+                        await bus.publish_status(
+                            task="blocked_item_change_timeout",
+                            confidence=None,
+                            next_step="explore_anyway",
+                            extra=self._stats_extra(),
+                        )
+                        # Allow exploration after timeout
+                        consec_errors = 0
+                    else:
+                        if not hasattr(self, '_last_block_ts'):
+                            self._last_block_ts = time.perf_counter()
+                        
+                        await bus.publish_status(
+                            task="blocked_item_change",
+                            confidence=None,
+                            next_step="BackAction",
+                            extra=self._stats_extra(),
+                        )
+                        if not settings.dry_run:
+                            from app.actions.types import BackAction
 
-                        execute(BackAction())
-                        self._backs += 1
-                    consec_errors = 0
-                    continue
+                            execute(BackAction())
+                            self._backs += 1
+                        consec_errors = 0
+                        continue
 
                 # Note: no hard guard for locked features; heuristic will learn/avoid
 
-                # If errors or UI unchanged for several frames, try minimal web search to enrich memory
+                # If errors or UI unchanged for several frames, optionally run web search when OCR text is present
                 if consec_errors >= 2 or self._unchanged_count >= 3:
                     self._stuck_events += 1
                     try:
@@ -274,18 +293,44 @@ class AgentRunner:
                     except Exception:
                         pass
                     try:
-                        hints = [line for line in state.ocr_text.splitlines() if line.strip()][:3]
-                        await bus.publish_step("stuck:search:start", {"hints": hints})
-                        # Simple Google queries; relies on fetch_urls to rate-limit politely
-                        queries = [f"https://www.google.com/search?q=Epic7%20{h}" for h in hints]
-                        docs = fetch_urls(queries[:2])
-                        facts = [
-                            Fact(id=None, title=d.title, source_url=d.url, summary=summarize(d))
-                            for d in docs
-                        ]
-                        if facts:
-                            self._mem_store.add_facts(facts)
-                        await bus.publish_step("stuck:search:end", {"facts": [f.title for f in facts]})
+                        ocr_text = (state.ocr_text or "").strip()
+                        # Only proceed if we have meaningful OCR content
+                        if ocr_text:
+                            # Throttle web searches to avoid spam (60s cooldown)
+                            now_perf = time.perf_counter()
+                            if (now_perf - self._last_web_search_ts) >= 60.0:
+                                raw_lines = [line.strip() for line in ocr_text.splitlines() if line.strip()]
+                                # Keep only lines with enough alphanumeric signal to be useful search terms
+                                def has_signal(s: str) -> bool:
+                                    alnum = sum(1 for c in s if c.isalnum())
+                                    return alnum >= 6
+                                hints = [line for line in raw_lines if has_signal(line)][:3]
+                                if hints:
+                                    current_fp = (state.ocr_text or "").strip().lower()[:200]
+                                    last_ts = self._recent_search_ocr_fp.get(current_fp)
+                                    # Skip if we already searched for this OCR fingerprint recently
+                                    if last_ts is not None and (now_perf - last_ts) < self._search_dedupe_window_s:
+                                        try:
+                                            await bus.publish_step(
+                                                "stuck:search:skip",
+                                                {"reason": "recently searched same OCR", "ttl_s": int(self._search_dedupe_window_s - (now_perf - last_ts))},
+                                            )
+                                        except Exception:
+                                            pass
+                                    else:
+                                        await bus.publish_step("stuck:search:start", {"hints": hints})
+                                        queries = [f"https://www.google.com/search?q=Epic7%20{h}" for h in hints]
+                                        docs = fetch_urls(queries[:1])  # keep minimal to reduce traffic
+                                        facts = [
+                                            Fact(id=None, title=d.title, source_url=d.url, summary=summarize(d))
+                                            for d in docs
+                                        ]
+                                        if facts:
+                                            self._mem_store.add_facts(facts)
+                                        await bus.publish_step("stuck:search:end", {"facts": [f.title for f in facts]})
+                                        self._last_web_search_ts = now_perf
+                                        # Remember we searched this OCR fingerprint to avoid repeats
+                                        self._recent_search_ocr_fp[current_fp] = now_perf
                     except Exception:
                         pass
 
@@ -382,8 +427,16 @@ class AgentRunner:
                             if d < best_d:
                                 best_d = d
                                 chosen_label = b.label
-                    # Encourage exploration more when stuck counter is elevated
-                    explore_boost = 0.2 if self._unchanged_count >= 2 else 0.0
+                    # Encourage exploration more when stuck counter is elevated or if we recently searched same OCR
+                    searched_recently_same = False
+                    try:
+                        if self._last_ocr_fp and self._last_ocr_fp in self._recent_search_ocr_fp:
+                            _ts = self._recent_search_ocr_fp[self._last_ocr_fp]
+                            if (time.perf_counter() - _ts) < self._search_dedupe_window_s:
+                                searched_recently_same = True
+                    except Exception:
+                        searched_recently_same = False
+                    explore_boost = 0.4 if searched_recently_same else (0.2 if self._unchanged_count >= 2 else 0.0)
                     avoid = []
                     try:
                         from app.state.profile import is_mode_locked

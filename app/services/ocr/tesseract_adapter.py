@@ -1,6 +1,12 @@
 from typing import Any, cast
 
 from PIL import Image, ImageOps, ImageFilter
+try:
+    import cv2  # type: ignore
+    _cv2_ok = True
+except Exception:  # pragma: no cover
+    cv2 = None  # type: ignore
+    _cv2_ok = False
 
 from app.config import settings
 
@@ -22,6 +28,19 @@ def _preprocess(img: Image.Image) -> Image.Image:
         work = work.resize((int(w * scale), int(h * scale)), Image.BICUBIC)
     if mode == "none":
         return work
+    # Prefer OpenCV path when available for robust thresholding
+    if _cv2_ok and mode in {"auto", "binary"}:
+        import numpy as _np
+        _cv2 = cv2  # type: ignore
+        arr = _np.array(work.convert("RGB"))
+        gray = _cv2.cvtColor(arr, _cv2.COLOR_RGB2GRAY)
+        gray = _cv2.convertScaleAbs(gray, alpha=1.2, beta=0)
+        gray = _cv2.bilateralFilter(gray, d=5, sigmaColor=35, sigmaSpace=35)
+        bin_img = _cv2.adaptiveThreshold(gray, 255, _cv2.ADAPTIVE_THRESH_GAUSSIAN_C, _cv2.THRESH_BINARY, 31, 10)
+        kernel = _cv2.getStructuringElement(_cv2.MORPH_RECT, (2, 2))
+        bin_img = _cv2.morphologyEx(bin_img, _cv2.MORPH_OPEN, kernel, iterations=1)
+        from PIL import Image as _Image
+        return _Image.fromarray(bin_img)
     if mode == "grayscale" or mode == "auto":
         work = ImageOps.grayscale(work)
         work = ImageOps.autocontrast(work)
@@ -49,16 +68,24 @@ def run_ocr(image: Image.Image, lang: str | None = None, **kwargs: Any) -> str:
     language = lang or settings.ocr_language
     psm = int(getattr(settings, "ocr_psm", 6))
     oem = int(getattr(settings, "ocr_oem", 3))
-    cfg = kwargs.get("config") or f"--psm {psm} --oem {oem}"
+    base_cfg = f"--psm {psm} --oem {oem} -c preserve_interword_spaces=1"
+    cfg = kwargs.get("config") or base_cfg
     img = _preprocess(image)
     text: str = cast(Any, pytesseract).image_to_string(img, lang=language, config=cfg)
     if getattr(settings, "ocr_multi_pass", True):
         # second pass: higher psm for sparse text
         try:
-            cfg2 = f"--psm 7 --oem {oem}"
+            cfg2 = f"--psm 7 --oem {oem} -c preserve_interword_spaces=1"
             text2: str = cast(Any, pytesseract).image_to_string(img, lang=language, config=cfg2)
             if len(text2) > len(text):
                 text = text2
+        except Exception:
+            pass
+        try:
+            cfg3 = f"--psm 11 --oem {oem} -c preserve_interword_spaces=1"
+            text3: str = cast(Any, pytesseract).image_to_string(img, lang=language, config=cfg3)
+            if len(text3) > len(text):
+                text = text3
         except Exception:
             pass
     return text

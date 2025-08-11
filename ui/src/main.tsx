@@ -3,6 +3,9 @@ import "./styles.scss";
 import { MetricsChart } from "./components/Charts";
 import { createRoot } from "react-dom/client";
 
+// Backend configuration
+const BACKEND_URL = "http://127.0.0.1:8000";
+
 type StatusPayload = {
   agent_state?: string | null;
   task: string | null;
@@ -49,14 +52,14 @@ function App() {
     // Poll status every 1s
     const t1 = window.setInterval(async () => {
       try {
-        const j = await fetch("/telemetry/status").then((r) => r.json());
+        const j = await fetch(`${BACKEND_URL}/telemetry/status`).then((r) => r.json());
         setStatus(j);
       } catch {}
     }, 1000);
     // Poll decisions every 2s
     const t2 = window.setInterval(async () => {
       try {
-        const j = await fetch("/telemetry/decisions").then((r) => r.json());
+        const j = await fetch(`${BACKEND_URL}/telemetry/decisions`).then((r) => r.json());
         setDecisions(j.slice(-200).reverse());
       } catch {}
     }, 2000);
@@ -144,12 +147,12 @@ function App() {
     function onKey(e: KeyboardEvent) {
       if ((e.target as HTMLElement)?.tagName === "INPUT") return;
       const k = e.key.toLowerCase();
-      if (k === "s") fetch("/telemetry/control/start", { method: "POST" });
-      if (k === "p") fetch("/telemetry/control/pause", { method: "POST" });
-      if (k === "x") fetch("/telemetry/control/stop", { method: "POST" });
-      if (k === "b") fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) });
-      if (k === "w") fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) });
-      if (k === "g") fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) });
+      if (k === "s") fetch(`${BACKEND_URL}/telemetry/control/start`, { method: "POST" });
+      if (k === "p") fetch(`${BACKEND_URL}/telemetry/control/pause`, { method: "POST" });
+      if (k === "x") fetch(`${BACKEND_URL}/telemetry/control/stop`, { method: "POST" });
+      if (k === "b") fetch(`${BACKEND_URL}/telemetry/control/act`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) });
+      if (k === "w") fetch(`${BACKEND_URL}/telemetry/control/act`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) });
+      if (k === "g") fetch(`${BACKEND_URL}/telemetry/control/act`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) });
       if (k === "t") setTheme((prev) => (prev === "light" ? "dark" : "light"));
     }
     window.addEventListener("keydown", onKey);
@@ -188,17 +191,17 @@ function App() {
       <section style={{ position: "sticky", top: 0, background: "var(--bg, #fff)", paddingBottom: 8, zIndex: 10 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button
-            onClick={() => fetch("/telemetry/control/start", { method: "POST" })}
+            onClick={() => fetch(`${BACKEND_URL}/telemetry/control/start`, { method: "POST" })}
             style={{ padding: "6px 12px", background: "#10b981", color: "#fff", borderRadius: 6, border: 0 }}>
             Start
           </button>
           <button
-            onClick={() => fetch("/telemetry/control/pause", { method: "POST" })}
+            onClick={() => fetch(`${BACKEND_URL}/telemetry/control/pause`, { method: "POST" })}
             style={{ padding: "6px 12px", background: "#f59e0b", color: "#fff", borderRadius: 6, border: 0 }}>
             Pause
           </button>
           <button
-            onClick={() => fetch("/telemetry/control/stop", { method: "POST" })}
+            onClick={() => fetch(`${BACKEND_URL}/telemetry/control/stop`, { method: "POST" })}
             style={{ padding: "6px 12px", background: "#ef4444", color: "#fff", borderRadius: 6, border: 0 }}>
             Stop
           </button>
@@ -243,16 +246,16 @@ function App() {
             <div>Confidence: {status.confidence ?? "-"}</div>
             <div>Next: {status.next ?? "-"}</div>
             <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) })}>Back</button>
-              <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) })}>Wait 1s</button>
-              <button onClick={() => fetch("/telemetry/control/act", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) })}>Swipe gentle</button>
+              <button onClick={() => fetch(`${BACKEND_URL}/telemetry/control/act`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "back" }) })}>Back</button>
+              <button onClick={() => fetch(`${BACKEND_URL}/telemetry/control/act`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "wait", seconds: 1.0 }) })}>Wait 1s</button>
+              <button onClick={() => fetch(`${BACKEND_URL}/telemetry/control/act`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "swipe_gentle" }) })}>Swipe gentle</button>
               <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 <input
                   type="checkbox"
                   checked={hfEnabled}
                   onChange={async (e) => {
                     setHfEnabled(e.target.checked);
-                    await fetch("/telemetry/control/model/policy", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
+                    await fetch(`${BACKEND_URL}/telemetry/control/model/policy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled: e.target.checked }) });
                   }}
                 />
                 hf-policy enabled
@@ -430,7 +433,7 @@ function Stat(props: { label: string; value: string | number }) {
 function MemoryPanel() {
   const [items, setItems] = useState<{ ts: string; image_url: string; ocr?: string }[]>([]);
   async function refresh() {
-    const j = await fetch("/telemetry/memory/recent").then((r) => r.json());
+    const j = await fetch(`${BACKEND_URL}/telemetry/memory/recent`).then((r) => r.json());
     setItems(j);
   }
   useEffect(() => {
@@ -449,7 +452,7 @@ function MemoryPanel() {
           </div>
           <div style={{ width: "100%", aspectRatio: "16 / 9", overflow: "hidden", background: "#000" }}>
             <img
-              src={m.image_url}
+              src={`${BACKEND_URL}${m.image_url}`}
               alt={m.ts}
               style={{ width: "100%" }}
             />
@@ -471,16 +474,16 @@ function SessionReplay() {
   const [jsonl, setJsonl] = useState<string>("");
   const [idx, setIdx] = useState<number>(-1);
   async function refresh() {
-    const j = await fetch("/analytics/session").then((r) => r.json());
+    const j = await fetch(`${BACKEND_URL}/analytics/session`).then((r) => r.json());
     setRows(j);
     if (j.length && idx === -1) setIdx(j.length - 1);
   }
   async function exportJsonl() {
-    const t = await fetch("/analytics/session/export").then((r) => r.text());
+    const t = await fetch(`${BACKEND_URL}/analytics/session/export`).then((r) => r.text());
     setJsonl(t);
   }
   async function importJsonl() {
-    await fetch("/analytics/session/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonl }) });
+    await fetch(`${BACKEND_URL}/analytics/session/import`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonl }) });
     await refresh();
   }
   useEffect(() => {
@@ -525,7 +528,7 @@ function SessionReplay() {
               <div style={{ width: 240, background: "#000" }}>
                 {rows[idx].image_path ? (
                   <img
-                    src={rows[idx].image_path}
+                    src={`${BACKEND_URL}${rows[idx].image_path}`}
                     alt={rows[idx].ts}
                     style={{ width: "100%" }}
                   />
@@ -579,12 +582,12 @@ function SessionReplay() {
 function WindowControls() {
   const [rect, setRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   async function refresh() {
-    const j = await fetch("/telemetry/window/rect").then((r) => r.json());
+    const j = await fetch(`${BACKEND_URL}/telemetry/window/rect`).then((r) => r.json());
     setRect(j);
   }
   async function apply() {
     if (!rect) return;
-    await fetch("/telemetry/window/set", {
+    await fetch(`${BACKEND_URL}/telemetry/window/set`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(rect),
@@ -649,7 +652,7 @@ function WindowControls() {
 function DoctorPanel() {
   const [data, setData] = useState<{ ok: boolean; issues: string[]; details: Record<string, any>; suggestions?: { issue: string; suggestion: string }[] } | null>(null);
   async function refresh() {
-    const j = await fetch("/telemetry/doctor/self-check").then((r) => r.json());
+    const j = await fetch(`${BACKEND_URL}/telemetry/doctor/self-check`).then((r) => r.json());
     setData(j);
   }
   useEffect(() => {
@@ -706,7 +709,7 @@ function GuidanceEditor({ current, onSaved }: { current: { prioritize: string[];
         .map((s) => s.trim())
         .filter(Boolean),
     };
-    await fetch("/telemetry/guidance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    await fetch(`${BACKEND_URL}/telemetry/guidance`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     onSaved();
   }
   return (
@@ -742,7 +745,7 @@ function SuggestionBox({ suggestions }: { suggestions: string[] }) {
   async function submit() {
     const t = text.trim();
     if (!t) return;
-    await fetch("/telemetry/guidance/suggest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: t }) });
+    await fetch(`${BACKEND_URL}/telemetry/guidance/suggest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: t }) });
     setText("");
   }
   return (
@@ -783,7 +786,7 @@ function GoalsPanel({ goals }: { goals: { name: string; approved?: boolean }[] }
     setItems(goals.map((g) => ({ name: g.name, approved: !!g.approved })));
   }, [goals]);
   async function saveAll() {
-    await fetch("/telemetry/guidance/goals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ goals: items }) });
+    await fetch(`${BACKEND_URL}/telemetry/guidance/goals`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ goals: items }) });
   }
   return (
     <div>
@@ -816,7 +819,7 @@ function GoalsPanel({ goals }: { goals: { name: string; approved?: boolean }[] }
 function HelpPromptBox({ current }: { current: string }) {
   const [text, setText] = useState<string>(current || "");
   async function save() {
-    await fetch("/telemetry/guidance/help", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    await fetch(`${BACKEND_URL}/telemetry/guidance/help`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
   }
   return (
     <div style={{ marginTop: 8 }}>
