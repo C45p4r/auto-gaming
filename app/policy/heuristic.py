@@ -153,6 +153,9 @@ def propose_action(state: GameState) -> tuple[float, object]:
             y2 = int(base_h * 0.70)
             return score, SwipeAction(x1=x, y1=y1, x2=x, y2=y2, duration_ms=320)
         return score, WaitAction(seconds=0.5)
+    # If OCR mentions multiple 'locked' items on battle screen, deprioritize 'battle' quickly
+    if "battle" in text_lower and "locked" in text_lower:
+        _label_cooldown["battle"] = max(_label_cooldown.get("battle", 0), 50)
 
     # If a lock popup is on screen, mark last selected label as locked and set a long cooldown
     if any(cue in text_lower for cue in _LOCK_CUES):

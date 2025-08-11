@@ -297,6 +297,21 @@ class AgentRunner:
                     score, action, who = cached
                 else:
                     score, action, who = await orchestrate(state)
+                # Loop-breaking: if we have repeated same state and TapAction many times, force diverse action
+                try:
+                    if self._unchanged_count >= 3 and action.__class__.__name__ == "TapAction":
+                        # prefer Back or Swipe to break deadlock
+                        action = BackAction() if (self._repeat_action_count % 2 == 0) else SwipeAction(
+                            x1=int(settings.input_base_width * 0.5),
+                            y1=int(settings.input_base_height * 0.70),
+                            x2=int(settings.input_base_width * 0.5),
+                            y2=int(settings.input_base_height * 0.35),
+                            duration_ms=320,
+                        )
+                        who = f"{who}+loopbreak"
+                        score = max(0.0, float(score) * 0.9)
+                except Exception:
+                    pass
                 await bus.publish_step("policy", {"who": who, "score": score, "action": action.__class__.__name__})
                 await bus.publish_status(
                     task=f"{who} proposing action",
@@ -395,9 +410,9 @@ class AgentRunner:
                         ocr_fp=ocr_fp,
                         metrics={},
                     )
-                    # Populate decision cache for identical states
+                    # Populate decision cache for identical states (but avoid caching forced loop-break actions)
                     try:
-                        if state.state_hash:
+                        if state.state_hash and not who.endswith("+loopbreak"):
                             self._cache.set(state.state_hash, score, action, who)
                     except Exception:
                         pass

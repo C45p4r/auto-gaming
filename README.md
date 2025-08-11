@@ -667,6 +667,7 @@ The agent includes a lightweight contextual bandit to guide exploration.
 - Safety: locked features (learned from popups/memory) are skipped by heuristic and down‑weighted by orchestrator.
 
 Notes:
+
 - Guidance/Goals edits are persisted to `data/guidance.json`.
 - The policy consults memory before proposing actions; check the “Agent Steps” stream for `memory:search` and `memory:locked_labels`.
 
