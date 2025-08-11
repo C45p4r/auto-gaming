@@ -4,7 +4,7 @@ from app.actions.types import TapAction, WaitAction, BackAction, SwipeAction
 from app.metrics.registry import compute_metrics, score_metrics
 from app.state.encoder import GameState
 from app.config import settings
-from app.state.profile import is_mode_sufficient, mark_mode_done, reset_daily_if_new_day
+from app.state.profile import is_mode_sufficient, mark_mode_done, reset_daily_if_new_day, is_mode_locked, set_mode_locked
 import random
 
 
@@ -118,16 +118,20 @@ def propose_action(state: GameState) -> tuple[float, object]:
 
     # OCR-guided targeting: choose visible menu items and rotate among them
     text = (state.ocr_text or "").lower()
-    # If we see locked cues, put a long cooldown on 'arena'
+    # If we see locked cues, record lock for 'arena' and apply a long cooldown to avoid re-targeting
     if any(s in text for s in ("rookie arena", "unlock after", "arena locked")):
-        _label_cooldown["arena"] = max(_label_cooldown.get("arena", 0), 20)
+        try:
+            set_mode_locked("arena", True)
+        except Exception:
+            pass
+        _label_cooldown["arena"] = max(_label_cooldown.get("arena", 0), 50)
     # quick path: if tokens available, build a set for O(1) contains
     token_set = set((state.ocr_tokens or []))
     matched: list[tuple[str, float, float]] = []
     for name, xf, yf in _TARGETS:
         if (name in text) or (name in token_set):
-            # Skip arena if on long cooldown due to lock
-            if name == "arena" and _label_cooldown.get("arena", 0) > 0:
+            # Skip arena if on long cooldown or persisted as locked
+            if name == "arena" and (_label_cooldown.get("arena", 0) > 0 or is_mode_locked("arena")):
                 continue
             matched.append((name, xf, yf))
     if matched:

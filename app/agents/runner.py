@@ -24,7 +24,6 @@ from app.telemetry.bus import bus
 from app.safety.guards import (
     detect_external_navigation_text,
     detect_item_change_text,
-    detect_locked_feature_text,
 )
 from app.services.search.web_ingest import fetch_urls, summarize
 from app.memory.store import MemoryStore, Fact
@@ -236,26 +235,7 @@ class AgentRunner:
                     consec_errors = 0
                     continue
 
-                # Locked feature guard: if UI indicates a feature is locked (e.g., Rookie Arena)
-                if detect_locked_feature_text(state.ocr_text):
-                    self._blocks += 1
-                    try:
-                        metrics_store.add_point("blocks", float(self._blocks))
-                    except Exception:
-                        pass
-                    await bus.publish_status(
-                        task="blocked_locked_feature",
-                        confidence=None,
-                        next_step="BackAction",
-                        extra=self._stats_extra(),
-                    )
-                    if not settings.dry_run:
-                        execute(BackAction())
-                        self._backs += 1
-                    consec_errors = 0
-                    # Skip deciding further this frame to avoid immediate re-tap
-                    await asyncio.sleep(0.3)
-                    continue
+                # Note: no hard guard for locked features; heuristic will learn/avoid
 
                 # If errors or UI unchanged for several frames, try minimal web search to enrich memory
                 if consec_errors >= 2 or self._unchanged_count >= 3:

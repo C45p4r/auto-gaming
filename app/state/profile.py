@@ -14,6 +14,7 @@ _PROFILE_PATH = Path("data/profile.json")
 class ModeStatus:
     last_done_iso: str | None
     sufficient: bool
+    locked: bool | None = None
 
 
 def _load() -> Dict[str, Any]:
@@ -42,9 +43,11 @@ def is_mode_sufficient(mode: str) -> bool:
 def mark_mode_done(mode: str, sufficient: bool = False) -> None:
     data = _load()
     modes: Dict[str, Any] = data.setdefault("modes", {})
+    prev = modes.get(mode, {})
     modes[mode] = {
         "last_done_iso": datetime.now(tz=timezone.utc).isoformat(),
         "sufficient": bool(sufficient),
+        "locked": bool(prev.get("locked", False)),
     }
     _save(data)
 
@@ -60,5 +63,20 @@ def reset_daily_if_new_day() -> None:
             m["sufficient"] = False
         data["last_reset_day"] = today
         _save(data)
+
+
+def is_mode_locked(mode: str) -> bool:
+    data = _load()
+    ms = data.get("modes", {}).get(mode, {})
+    return bool(ms.get("locked", False))
+
+
+def set_mode_locked(mode: str, locked: bool = True) -> None:
+    data = _load()
+    modes: Dict[str, Any] = data.setdefault("modes", {})
+    ms = modes.get(mode, {})
+    ms["locked"] = bool(locked)
+    modes[mode] = ms
+    _save(data)
 
 
