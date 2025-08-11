@@ -1,6 +1,6 @@
 # auto-gaming
 
-Status: Beta v1.0.0 (Windows Emulator). Core features implemented; requires further testing and tuning.
+Status: Beta v1.0.1 (Windows Emulator). Core features implemented; policy now consults memory first and learns to avoid locked features.
 
 ## Vision
 
@@ -292,6 +292,15 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
 - [ ] HF agents optional but seamless; falls back gracefully
 - [ ] Comprehensive docs and troubleshooting; one‑click Windows setup
 - [ ] Test suite green: unit, golden OCR, integration, telemetry assertions
+
+### v1.0.1 — Learning‑aware policy and UX polish
+
+- [x] Memory‑first decision consult: orchestrator queries `MemoryStore` each step and surfaces hits in UI (`memory:search` step)
+- [x] Locked‑feature learning: heuristic infers lock popups (e.g., “You can enter after…/Tap to close”) and persists locked labels, skipping both text and icon taps
+- [x] Icon‑based targeting: perception detects common buttons via normalized anchors; policy can click icons even when OCR font/color differs
+- [x] Lightweight reinforcement learning: contextual bandit (epsilon‑greedy) biases exploration vs. exploitation and updates from reward shaped by metrics
+- [x] Guidance/Goals persistence: edits saved to `data/guidance.json` and restored on startup
+- [x] Logs panel improvements: fixed‑height scroll and display only 10 most recent entries
 
 #### v2.0.1 — v2.1.0 UI/UX improvements (10 updates)
 
@@ -642,6 +651,24 @@ Windows quickstart:
 - Run backend: `uvicorn app.main:app --reload`
 - Run UI: `cd ui && pnpm install && pnpm dev`
 - Use the UI Start/Pause/Stop buttons to control the agent
+
+### Reinforcement Learning (bandit) configuration
+
+The agent includes a lightweight contextual bandit to guide exploration.
+
+- Environment variables:
+  - `RL_ENABLED=true|false` — enable/disable bandit guidance (default true)
+  - `RL_METHOD=bandit|off` — select algorithm (currently bandit)
+  - `RL_EPS_START=0.2` — initial epsilon for exploration
+  - `RL_EPS_END=0.05` — floor for epsilon after decay
+  - `RL_PERSIST_PATH=data/policy.json` — where learned arm statistics are stored
+- Arms: high‑level targets such as `episode`, `side story`, `battle`, `hunt`, `arena`, `summon`, `shop`, `sanctuary`.
+- Reward shaping: positive for `daily_progress` increases; negative for `blocks`, `stuck_events`, and `decision_latency_ms` increases.
+- Safety: locked features (learned from popups/memory) are skipped by heuristic and down‑weighted by orchestrator.
+
+Notes:
+- Guidance/Goals edits are persisted to `data/guidance.json`.
+- The policy consults memory before proposing actions; check the “Agent Steps” stream for `memory:search` and `memory:locked_labels`.
 
 Backend (FastAPI):
 
