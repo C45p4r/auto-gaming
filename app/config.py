@@ -10,43 +10,48 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     logs_dir: str = Field(default="logs", alias="LOGS_DIR")
 
-    # OCR (maximize text signal)
-    ocr_language: str = Field(default="eng", alias="OCR_LANGUAGE")
+    # OCR (maximize text signal for mobile games)
+    ocr_language: str = Field(default="eng+kor", alias="OCR_LANGUAGE")
     tesseract_cmd: str | None = Field(default="C:\\Program Files\\Tesseract-OCR\\tesseract.exe", alias="TESSERACT_CMD")
     ocr_preprocess: str = Field(default="sharpness", alias="OCR_PREPROCESS")  # none|grayscale|binary|auto|sharpness
     ocr_scale: float = Field(default=2.0, alias="OCR_SCALE")
+    ocr_preprocess_intensity: float = Field(default=2.5, alias="OCR_PREPROCESS_INTENSITY")
     ocr_psm: int = Field(default=7, alias="OCR_PSM")
     ocr_oem: int = Field(default=3, alias="OCR_OEM")
     ocr_multi_pass: bool = Field(default=True, alias="OCR_MULTI_PASS")
     ocr_ensemble: bool = Field(default=True, alias="OCR_ENSEMBLE")
     ocr_engines: str = Field(default="paddle,tesseract_batched,tesseract", alias="OCR_ENGINES")
 
-    # Emulator / ADB
+    # AVD / ADB Configuration
+    avd_name: str = Field(default="Pixel_9a", alias="AVD_NAME")
+    avd_resolution: str = Field(default="1080x2424", alias="AVD_RESOLUTION")
     adb_path: str = Field(default="adb", alias="ADB_PATH")
+    adb_timeout: int = Field(default=10, alias="ADB_TIMEOUT")
+    adb_retry_count: int = Field(default=3, alias="ADB_RETRY_COUNT")
 
-    # Capture / Window (stable, user-specified position and size)
+    # Capture / Window (AVD-optimized positioning and size)
     capture_fps: float = Field(default=2.0, alias="CAPTURE_FPS")
     capture_backend: str | None = Field(
         default="window", alias="CAPTURE_BACKEND"
     )  # "auto" | "adb" | "window"
     window_title_hint: str | None = Field(
-        default=r"Google Play Games|Epic Seven|Epic 7|Epic Seven - FRl3ZD", alias="WINDOW_TITLE_HINT"
+        default=r"Pixel_9a|Android|Emulator|AVD", alias="WINDOW_TITLE_HINT"
     )
     window_force_foreground: bool = Field(default=True, alias="WINDOW_FORCE_FOREGROUND")
     window_enforce_topmost: bool = Field(default=True, alias="WINDOW_ENFORCE_TOPMOST")
-    window_left: int = Field(default=82, alias="WINDOW_LEFT")
-    window_top: int = Field(default=80, alias="WINDOW_TOP")
-    window_client_width: int = Field(default=882, alias="WINDOW_CLIENT_WIDTH")
-    window_client_height: int = Field(default=496, alias="WINDOW_CLIENT_HEIGHT")
+    window_left: int = Field(default=5, alias="WINDOW_LEFT")
+    window_top: int = Field(default=20, alias="WINDOW_TOP")
+    window_client_width: int = Field(default=1395, alias="WINDOW_CLIENT_WIDTH")
+    window_client_height: int = Field(default=999, alias="WINDOW_CLIENT_HEIGHT")
 
-    # Input (enable real taps; base coords must match client area)
+    # Input (ADB-based - most reliable for Android emulators)
     input_backend: str | None = Field(
-        default="window", alias="INPUT_BACKEND"
-    )  # "auto" | "adb" | "window"
-    input_base_width: int = Field(default=882, alias="INPUT_BASE_WIDTH")
-    input_base_height: int = Field(default=496, alias="INPUT_BASE_HEIGHT")
-    # Exclude a bottom margin from tap targets to avoid taskbar if overlapping (pixels)
-    input_exclude_bottom_px: int = Field(default=40, alias="INPUT_EXCLUDE_BOTTOM_PX")
+        default="adb", alias="INPUT_BACKEND"
+    )  # "adb" (recommended) | "window" (fallback)
+    input_base_width: int = Field(default=1080, alias="INPUT_BASE_WIDTH")
+    input_base_height: int = Field(default=2424, alias="INPUT_BASE_HEIGHT")
+    # Exclude a bottom margin from tap targets (AVD: 0, Windows: 40)
+    input_exclude_bottom_px: int = Field(default=0, alias="INPUT_EXCLUDE_BOTTOM_PX")
 
     # Parallelism
     parallel_mode: str = Field(default="async", alias="PARALLEL_MODE")  # "async" | "ray"
@@ -69,6 +74,12 @@ class Settings(BaseSettings):
     embedding_model_id: str = Field(
         default="sentence-transformers/all-MiniLM-L6-v2", alias="EMBEDDING_MODEL_ID"
     )
+
+    # Game-Specific Settings (Epic Seven)
+    game_name: str = Field(default="Epic Seven", alias="GAME_NAME")
+    game_language: str = Field(default="eng+kor", alias="GAME_LANGUAGE")
+    game_safety_enabled: bool = Field(default=True, alias="GAME_SAFETY_ENABLED")
+    game_iap_blocking: bool = Field(default=True, alias="GAME_IAP_BLOCKING")
 
     # Safety
     hard_block_iap: bool = Field(default=True, alias="HARD_BLOCK_IAP")
