@@ -5,6 +5,8 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
+from pathlib import Path
+import json
 
 
 @dataclass
@@ -33,7 +35,8 @@ class TelemetryBus:
         self._subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
         self._status: dict[str, Any] = {"task": None, "confidence": None, "next": None}
         self._decision_log: list[DecisionLogEntry] = []
-        self._guidance: Guidance = Guidance(
+        self._guidance_path = Path("data/guidance.json")
+        self._guidance: Guidance = self._load_guidance() or Guidance(
             goals=[
                 {"name": "Complete daily quests", "approved": True},
                 {"name": "Maximize resources (stamina, gold)", "approved": True},
@@ -115,6 +118,7 @@ class TelemetryBus:
 
     async def set_guidance(self, guidance: Guidance) -> None:
         self._guidance = guidance
+        self._save_guidance()
         await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
 
     def get_status(self) -> dict[str, Any]:
@@ -128,6 +132,7 @@ class TelemetryBus:
 
     async def set_help_prompt(self, prompt: str | None) -> None:
         self._help_prompt = (prompt or "").strip() or None
+        self._save_guidance()
         await self._broadcast({"type": "guidance", "data": {**self._guidance.__dict__, "help_prompt": self._help_prompt}})
 
     def get_help_prompt(self) -> str | None:
@@ -140,6 +145,7 @@ class TelemetryBus:
         # keep last 20 suggestions
         self._guidance.suggestions.append(t)
         self._guidance.suggestions = self._guidance.suggestions[-20:]
+        self._save_guidance()
         await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
 
     async def set_goals(self, goals: list[dict]) -> None:
@@ -151,6 +157,7 @@ class TelemetryBus:
                 continue
             cleaned.append({"name": name, "approved": bool(g.get("approved", True))})
         self._guidance.goals = cleaned
+        self._save_guidance()
         await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
 
     async def approve_goal(self, name: str, approved: bool) -> None:
@@ -165,7 +172,33 @@ class TelemetryBus:
                 break
         if not found:
             self._guidance.goals.append({"name": name, "approved": bool(approved)})
+        self._save_guidance()
         await self._broadcast({"type": "guidance", "data": self._guidance.__dict__})
+
+    # Persistence helpers
+    def _load_guidance(self) -> Guidance | None:
+        try:
+            if self._guidance_path.exists():
+                obj = json.loads(self._guidance_path.read_text(encoding="utf-8"))
+                g = Guidance(
+                    prioritize=list(obj.get("prioritize", [])),
+                    avoid=list(obj.get("avoid", [])),
+                    suggestions=list(obj.get("suggestions", []))[:20],
+                    goals=list(obj.get("goals", [])),
+                )
+                self._help_prompt = obj.get("help_prompt")
+                return g
+        except Exception:
+            return None
+        return None
+
+    def _save_guidance(self) -> None:
+        try:
+            self._guidance_path.parent.mkdir(parents=True, exist_ok=True)
+            obj = {**self._guidance.__dict__, "help_prompt": self._help_prompt}
+            self._guidance_path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
 
 
 bus = TelemetryBus()

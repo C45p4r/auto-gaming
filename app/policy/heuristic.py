@@ -23,6 +23,8 @@ _LOCK_CUES: tuple[str, ...] = (
     "rookie arena",
     "unlock after",
     "unlocked after",
+    "you can enter after",
+    "you can enter after clearing",
     "will be available",
     "will be open",
     "available after",
@@ -30,8 +32,27 @@ _LOCK_CUES: tuple[str, ...] = (
     "clear chapter",
     "clear stage",
     "locked",
+    "tap to close",
     "touch anywhere",
 )
+
+# Map phrases in OCR to canonical labels we track in profile
+_LABEL_FROM_TEXT = {
+    "arena": "arena",
+    "hunt": "hunt",
+    "labyrinth": "labyrinth",
+    "sanctuary": "sanctuary",
+    "episode": "episode",
+    "side story": "side story",
+    "summon": "summon",
+    "shop": "shop",
+}
+
+def _infer_label_from_text(text_lower: str) -> str | None:
+    for k, v in _LABEL_FROM_TEXT.items():
+        if k in text_lower:
+            return v
+    return None
 
 # Normalized targets (xFrac, yFrac) for common Epic 7 lobby menu items
 _TARGETS = [
@@ -136,9 +157,10 @@ def propose_action(state: GameState) -> tuple[float, object]:
     # If a lock popup is on screen, mark last selected label as locked and set a long cooldown
     if any(cue in text_lower for cue in _LOCK_CUES):
         try:
-            if _last_selected_label:
-                set_mode_locked(_last_selected_label, True)
-                _label_cooldown[_last_selected_label] = max(_label_cooldown.get(_last_selected_label, 0), 300)
+            target_label = _last_selected_label or _infer_label_from_text(text_lower)
+            if target_label:
+                set_mode_locked(target_label, True)
+                _label_cooldown[target_label] = max(_label_cooldown.get(target_label, 0), 300)
         except Exception:
             pass
 
