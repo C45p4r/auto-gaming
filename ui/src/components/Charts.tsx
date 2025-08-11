@@ -5,11 +5,14 @@ type Point = { ts: string; value: number };
 export function MetricsChart() {
   const [series, setSeries] = useState<Record<string, Point[]>>({});
   const [selected, setSelected] = useState<string | null>(null);
+  const [compare, setCompare] = useState<Record<string, { chunks: number[]; delta: number }>>({});
   useEffect(() => {
     async function fetchData() {
       const res = await fetch("/analytics/metrics");
       const json = (await res.json()) as Record<string, Point[]>;
       setSeries(json);
+      const cmp = await fetch("/analytics/metrics/compare?n=5").then((r) => r.json());
+      setCompare(cmp as Record<string, { chunks: number[]; delta: number }>);
     }
     fetchData();
     const id = setInterval(fetchData, 2000);
@@ -33,7 +36,14 @@ export function MetricsChart() {
         )}
       </div>
       {selected ? (
-        <MiniChart name={selected} points={series[selected] ?? []} />
+        <div>
+          <MiniChart name={selected} points={series[selected] ?? []} />
+          {compare[selected] && (
+            <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+              Chunks avg: {compare[selected].chunks.map((v) => v.toFixed(2)).join(", ")} | Delta: {compare[selected].delta.toFixed(2)}
+            </div>
+          )}
+        </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
           {keys.map((name) => (
