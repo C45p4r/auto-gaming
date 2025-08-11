@@ -1,6 +1,6 @@
 from typing import Any, cast
 
-from PIL import Image
+from PIL import Image, ImageOps, ImageFilter
 
 from app.config import settings
 
@@ -11,6 +11,27 @@ except Exception:  # pragma: no cover - environment-specific import
 
 # Expose a dynamically imported module as Any for typing
 pytesseract: Any | None = _pytesseract
+
+
+def _preprocess(img: Image.Image) -> Image.Image:
+    mode = (settings.ocr_preprocess or "auto").lower()
+    scale = max(1.0, float(getattr(settings, "ocr_scale", 1.0)))
+    work = img
+    if scale and abs(scale - 1.0) > 1e-3:
+        w, h = work.size
+        work = work.resize((int(w * scale), int(h * scale)), Image.BICUBIC)
+    if mode == "none":
+        return work
+    if mode == "grayscale" or mode == "auto":
+        work = ImageOps.grayscale(work)
+        work = ImageOps.autocontrast(work)
+    if mode == "binary":
+        work = ImageOps.grayscale(work)
+        work = ImageOps.autocontrast(work)
+        work = work.point(lambda p: 255 if p > 140 else 0, mode="1").convert("L")
+    # very light blur to reduce aliasing
+    work = work.filter(ImageFilter.MedianFilter(size=3))
+    return work
 
 
 def run_ocr(image: Image.Image, lang: str | None = None, **kwargs: Any) -> str:
@@ -26,8 +47,20 @@ def run_ocr(image: Image.Image, lang: str | None = None, **kwargs: Any) -> str:
         except Exception:
             pass
     language = lang or settings.ocr_language
-    config = kwargs.get("config")
-    text: str = cast(Any, pytesseract).image_to_string(image, lang=language, config=config)
+    psm = int(getattr(settings, "ocr_psm", 6))
+    oem = int(getattr(settings, "ocr_oem", 3))
+    cfg = kwargs.get("config") or f"--psm {psm} --oem {oem}"
+    img = _preprocess(image)
+    text: str = cast(Any, pytesseract).image_to_string(img, lang=language, config=cfg)
+    if getattr(settings, "ocr_multi_pass", True):
+        # second pass: higher psm for sparse text
+        try:
+            cfg2 = f"--psm 7 --oem {oem}"
+            text2: str = cast(Any, pytesseract).image_to_string(img, lang=language, config=cfg2)
+            if len(text2) > len(text):
+                text = text2
+        except Exception:
+            pass
     return text
 
 

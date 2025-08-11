@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     # OCR
     ocr_language: str = Field(default="eng", alias="OCR_LANGUAGE")
     tesseract_cmd: str | None = Field(default=None, alias="TESSERACT_CMD")
+    ocr_preprocess: str = Field(default="auto", alias="OCR_PREPROCESS")  # none|grayscale|binary|auto
+    ocr_scale: float = Field(default=1.5, alias="OCR_SCALE")
+    ocr_psm: int = Field(default=6, alias="OCR_PSM")
+    ocr_oem: int = Field(default=3, alias="OCR_OEM")
+    ocr_multi_pass: bool = Field(default=True, alias="OCR_MULTI_PASS")
 
     # Emulator / ADB
     adb_path: str = Field(default="adb", alias="ADB_PATH")

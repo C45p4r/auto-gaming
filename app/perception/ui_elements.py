@@ -31,6 +31,8 @@ _KNOWN_BUTTONS: list[tuple[str, float, float, float, float]] = [
     ("shop", 0.86, 0.75, 0.10, 0.08),
     ("event", 0.14, 0.62, 0.12, 0.10),
     ("sanctuary", 0.12, 0.28, 0.12, 0.10),
+    ("hunt", 0.50, 0.28, 0.18, 0.12),
+    ("labyrinth", 0.82, 0.86, 0.16, 0.10),
 ]
 
 
