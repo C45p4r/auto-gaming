@@ -33,6 +33,7 @@ from app.analytics.session import session, Step
 from app.reliability.flake import FlakeTracker
 from app.policy.cache import DecisionCache
 from app.state.profile import mark_mode_done
+from app.perception.ui_elements import detect_ui_buttons
 
 
 RunState = Literal["idle", "running", "paused", "stopped"]
@@ -189,6 +190,23 @@ class AgentRunner:
                     title = f"obs:ocr:{int(time.time())}"
                     summary = (state.ocr_text or "")[:300]
                     self._mem_store.add_facts([Fact(id=None, title=title, source_url="local:ocr", summary=summary)])
+                except Exception:
+                    pass
+                # Also extract common UI buttons/icons heuristically and store as facts for cross-screen recognition
+                try:
+                    buttons = detect_ui_buttons(image, state.ocr_text or "", state.ocr_tokens or [])
+                    if buttons:
+                        facts = []
+                        for b in buttons[:8]:
+                            facts.append(
+                                Fact(
+                                    id=None,
+                                    title=f"ui:button:{b.label}",
+                                    source_url="local:ui",
+                                    summary=f"{b.label} at x={b.x},y={b.y},w={b.w},h={b.h}",
+                                )
+                            )
+                        self._mem_store.add_facts(facts)
                 except Exception:
                     pass
                 # External navigation guard: block actions if UI suggests leaving the game
