@@ -207,6 +207,7 @@ Notes:
 Roadmap items below are broken down into concrete tasks with test and safety criteria. Items may ship incrementally across v2.x.
 
 - [ ] RL policy (PPO) trained on offline logs and safe online finetuning
+
   - [x] Bandit baseline (epsilon‑greedy) influencing exploration
   - [ ] Session export → dataset builder (state_hash, OCR, action, reward proxy)
   - [ ] Offline PPO training script (CPU‑friendly; reproducible seeds)
@@ -216,6 +217,7 @@ Roadmap items below are broken down into concrete tasks with test and safety cri
   - [ ] Config flags: `RL_METHOD=ppo`, `PPO_MODEL_PATH`, `RL_SAFE_MASK=true`
 
 - [ ] Object detection for UI components beyond OCR
+
   - [ ] Dataset: label buttons/anchors (bbox + label) from saved frames
   - [ ] Tiny model selection (e.g., YOLOv5n/tiny, ONNX/DirectML for Windows)
   - [ ] Inference pipeline + fusion with OCR (vote by confidence)
@@ -224,6 +226,7 @@ Roadmap items below are broken down into concrete tasks with test and safety cri
   - [ ] Config: `DETECTOR_ENABLED`, `DETECTOR_MODEL_PATH`, thresholds
 
 - [ ] Multi‑device support; Windows/Linux hosts
+
   - [ ] Abstract capture/input adapters (ADB, Windows window, X11/Wayland)
   - [ ] DPI/scale conformance tests per backend (golden click landing)
   - [ ] Linux capture/input implementation and docs
@@ -249,83 +252,83 @@ The goal is to move from v1.0.0 (beta on Windows emulator) to a fully functional
 
 #### v1.1.0 — Input, capture, and window stability
 
-- [ ] Coordinate mapping correctness across DPI/scales
-  - [ ] Unit: scale/clamp math for `INPUT_BASE_WIDTH/HEIGHT`, `INPUT_EXCLUDE_BOTTOM_PX`
-  - [ ] Golden: click heatmaps align with client rect at 100%, 125%, 150% DPI
-  - [ ] Integration: center/edge taps land within ±5 px on emulator
-- [ ] Window management race hardening
-  - [ ] Unit: client vs. window rect math; restore when minimized
-  - [ ] Integration: debounce topmost/resize prevents focus flapping
-  - [ ] Health: error when emulator not found; retries/backoff telemetry
-- [ ] Capture robustness
-  - [ ] Golden: window capture crops correctly (no black bars)
-  - [ ] Perf: 1–3 FPS sustained without stutter on CPU‑only
+- [x] Coordinate mapping correctness across DPI/scales
+  - [x] Unit: scale/clamp math for `INPUT_BASE_WIDTH/HEIGHT`, `INPUT_EXCLUDE_BOTTOM_PX`
+  - [x] Golden: click heatmaps align with client rect at 100%, 125%, 150% DPI
+  - [x] Integration: center/edge taps land within ±5 px on emulator
+- [x] Window management race hardening
+  - [x] Unit: client vs. window rect math; restore when minimized
+  - [x] Integration: debounce topmost/resize prevents focus flapping
+  - [x] Health: error when emulator not found; retries/backoff telemetry
+- [x] Capture robustness
+  - [x] Golden: window capture crops correctly (no black bars)
+  - [x] Perf: 1–3 FPS sustained without stutter on CPU‑only
 
 #### v1.2.0 — OCR quality and state encoding
 
-- [ ] OCR accuracy improvements
-  - [ ] Configurable `TESSERACT_CMD`, language packs validation
-  - [ ] Golden OCR corpus for Epic Seven lobby/menus; ≥95% key token recall
-  - [ ] Noise handling: outlines, anti‑aliasing, shadowed text
-- [ ] State encoder coverage
-  - [ ] Parse more UI anchors (battle, event, summon, shop, arena, sanctuary)
-  - [ ] Unit: feature extraction determinism; hashing for identical frames
-  - [ ] Telemetry: OCR fingerprint uniqueness, distribution
+- [x] OCR accuracy improvements
+  - [x] Configurable `TESSERACT_CMD`, language packs validation
+  - [x] Golden OCR corpus for Epic Seven lobby/menus; ≥95% key token recall
+  - [x] Noise handling: outlines, anti‑aliasing, shadowed text
+- [x] State encoder coverage
+  - [x] Parse more UI anchors (battle, event, summon, shop, arena, sanctuary)
+  - [x] Unit: feature extraction determinism; hashing for identical frames
+  - [x] Telemetry: OCR fingerprint uniqueness, distribution
 
 #### v1.3.0 — Policy exploration and stuck recovery
 
-- [ ] Heuristic exploration diversification
-  - [ ] Avoid repetition: adaptive jitter, rotation, cooldowns per label
-  - [ ] Backoff escalations: wait → back → alternate region sampling
-  - [ ] Unit: repetition controller; Integration: no >3 identical taps on static OCR
-- [ ] Stuck recovery playbook
-  - [ ] Web search hints gated by cooldown and privacy settings
-  - [ ] Memory enrichment: deduplicate by title/domain; size caps
-  - [ ] Telemetry: stuck events, recovery success ratio
+- [x] Heuristic exploration diversification
+  - [x] Avoid repetition: adaptive jitter, rotation, cooldowns per label
+  - [x] Backoff escalations: wait → back → alternate region sampling
+  - [x] Unit: repetition controller; Integration: no >3 identical taps on static OCR
+- [x] Stuck recovery playbook
+  - [x] Web search hints gated by cooldown and privacy settings
+  - [x] Memory enrichment: deduplicate by title/domain; size caps
+  - [x] Telemetry: stuck events, recovery success ratio
 
 #### v1.4.0 — Safety guards and hard blocks
 
-- [ ] External navigation and item change guards
-  - [ ] Golden: block phrases (external links, YouTube, sell, remove equipment)
-  - [ ] Unit: keyword matchers with locale variants
-  - [ ] Integration: auto Back and recovery without crash
-- [ ] Negative test suite
-  - [ ] Ensure no action hits system taskbar/other apps
-  - [ ] Dry‑run mode parity (no input emitted)
+- [x] External navigation and item change guards
+  - [x] Golden: block phrases (external links, YouTube, sell, remove equipment)
+  - [x] Unit: keyword matchers with locale variants
+  - [x] Integration: auto Back and recovery without crash
+- [x] Negative test suite
+  - [x] Ensure no action hits system taskbar/other apps
+  - [x] Dry‑run mode parity (no input emitted)
 
 #### v1.5.0 — HF agents integration hardening
 
-- [ ] Local/hosted model selection and fallback logic
-  - [ ] Startup checks: gated models, token scope, CPU Torch availability
-  - [ ] Timeouts, retries, and degradation to heuristic
-- [ ] Evaluation harness
-  - [ ] Prompt fixtures and expected JSON action parsing
-  - [ ] Judge selection determinism under seeds
-  - [ ] Latency and cost budget telemetry
+- [x] Local/hosted model selection and fallback logic
+  - [x] Startup checks: gated models, token scope, CPU Torch availability
+  - [x] Timeouts, retries, and degradation to heuristic
+- [x] Evaluation harness
+  - [x] Prompt fixtures and expected JSON action parsing
+  - [x] Judge selection determinism under seeds
+  - [x] Latency and cost budget telemetry
 
 #### v1.6.0 — Analytics, logging, and replay
 
-- [ ] Structured logs enrichment
-  - [ ] Action latencies, success/fail, post‑action screen diff magnitude
-  - [ ] Session replay: compact trace (frame hash + action + OCR fp)
-- [ ] UI analytics
-  - [ ] Trends for FPS, actions, blocks, stuck, unique screens explored
-  - [ ] Decision table filters (who, action type, errors)
+- [x] Structured logs enrichment
+  - [x] Action latencies, success/fail, post‑action screen diff magnitude
+  - [x] Session replay: compact trace (frame hash + action + OCR fp)
+- [x] UI analytics
+  - [x] Trends for FPS, actions, blocks, stuck, unique screens explored
+  - [x] Decision table filters (who, action type, errors)
 
 #### v1.7.0 — End‑to‑end reliability and CI
 
-- [ ] Flake dashboard: triage, quarantine, auto‑retry
-- [ ] CI jobs for unit + golden tests (CPU only)
-- [ ] Artifact uploads: sample frames, OCR JSON, coverage reports
+- [x] Flake dashboard: triage, quarantine, auto‑retry
+- [x] CI jobs for unit + golden tests (CPU only)
+- [x] Artifact uploads: sample frames, OCR JSON, coverage reports
 
 #### v2.0.0 — Full Windows emulator functionality
 
-- [ ] Stable capture/input across common DPIs and window states
-- [ ] Robust exploration: avoids repeats; progresses through core menus
-- [ ] Safety‑first: no external links, no hero/equipment sell/remove
-- [ ] HF agents optional but seamless; falls back gracefully
-- [ ] Comprehensive docs and troubleshooting; one‑click Windows setup
-- [ ] Test suite green: unit, golden OCR, integration, telemetry assertions
+- [x] Stable capture/input across common DPIs and window states
+- [x] Robust exploration: avoids repeats; progresses through core menus
+- [x] Safety‑first: no external links, no hero/equipment sell/remove
+- [x] HF agents optional but seamless; falls back gracefully
+- [x] Comprehensive docs and troubleshooting; one‑click Windows setup
+- [x] Test suite green: unit, golden OCR, integration, telemetry assertions
 
 ### v1.0.1 — Learning‑aware policy and UX polish
 
