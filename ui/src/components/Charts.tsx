@@ -4,6 +4,7 @@ type Point = { ts: string; value: number };
 
 export function MetricsChart() {
   const [series, setSeries] = useState<Record<string, Point[]>>({});
+  const [selected, setSelected] = useState<string | null>(null);
   useEffect(() => {
     async function fetchData() {
       const res = await fetch("/analytics/metrics");
@@ -20,15 +21,26 @@ export function MetricsChart() {
   return (
     <div>
       <h2>Metrics</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-        {keys.map((name) => (
-          <MiniChart
-            key={name}
-            name={name}
-            points={series[name] ?? []}
-          />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+        {keys.map((k) => (
+          <label key={k} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+            <input type="radio" name="metric" checked={selected === k} onChange={() => setSelected(k)} />
+            {k}
+          </label>
         ))}
+        {selected && (
+          <button onClick={() => setSelected(null)} style={{ marginLeft: 8 }}>Show all</button>
+        )}
       </div>
+      {selected ? (
+        <MiniChart name={selected} points={series[selected] ?? []} />
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+          {keys.map((name) => (
+            <MiniChart key={name} name={name} points={series[name] ?? []} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

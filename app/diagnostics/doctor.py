@@ -49,3 +49,23 @@ def run_self_check() -> SelfCheckResult:
     return SelfCheckResult(ok=ok, issues=issues, details=details)
 
 
+def suggestions_for(result: SelfCheckResult) -> list[dict[str, str]]:
+    """Return human-friendly suggestions for known issues."""
+    suggestions: list[dict[str, str]] = []
+    for issue in result.issues:
+        s = ""
+        if issue.startswith("TESSERACT_CMD not set"):
+            s = "Set TESSERACT_CMD in .env, e.g. TESSERACT_CMD=C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+        elif issue.startswith("TESSERACT_CMD path does not exist"):
+            s = "Verify Tesseract installation path and update TESSERACT_CMD in .env"
+        elif "WINDOW_TITLE_HINT" in issue:
+            s = "Set WINDOW_TITLE_HINT to include 'Epic Seven|Google Play Games' in .env"
+        elif "window_client_width" in issue or "window_client_height" in issue:
+            s = "Set WINDOW_CLIENT_WIDTH/HEIGHT to emulator client size, e.g. 1280/720"
+        elif "input_base_width" in issue or "input_base_height" in issue:
+            s = "Set INPUT_BASE_WIDTH/HEIGHT to logical base (e.g. 1280/720)"
+        if s:
+            suggestions.append({"issue": issue, "suggestion": s})
+    return suggestions
+
+

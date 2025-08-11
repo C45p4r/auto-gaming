@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Body
 
 from app.analytics.metrics import store
 from app.analytics.session import session
@@ -23,3 +23,14 @@ async def get_metrics(names: list[str] | None = _DEFAULT_QUERY) -> dict[str, Any
 @router.get("/session")
 async def get_session() -> list[dict[str, Any]]:
     return [s.__dict__ for s in session.all()]
+
+
+@router.get("/session/export")
+async def export_session() -> str:
+    return session.to_jsonl()
+
+
+@router.post("/session/import")
+async def import_session(jsonl: str = Body(..., embed=True)) -> dict[str, int]:
+    n = session.replace_from_jsonl(jsonl)
+    return {"steps": n}

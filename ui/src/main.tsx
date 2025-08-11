@@ -253,9 +253,18 @@ function MemoryPanel() {
 
 function SessionReplay() {
   const [rows, setRows] = useState<{ ts: string; action: string; reason: string; image_path?: string | null }[]>([]);
+  const [jsonl, setJsonl] = useState<string>("");
   async function refresh() {
     const j = await fetch("/analytics/session").then((r) => r.json());
     setRows(j);
+  }
+  async function exportJsonl() {
+    const t = await fetch("/analytics/session/export").then((r) => r.text());
+    setJsonl(t);
+  }
+  async function importJsonl() {
+    await fetch("/analytics/session/import", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jsonl }) });
+    await refresh();
   }
   useEffect(() => {
     refresh();
@@ -264,6 +273,11 @@ function SessionReplay() {
   }, []);
   return (
     <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+        <button onClick={exportJsonl}>Export</button>
+        <button onClick={importJsonl}>Import</button>
+        <textarea placeholder="paste JSONL here" value={jsonl} onChange={(e) => setJsonl(e.target.value)} style={{ flex: 1, height: 80 }} />
+      </div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -374,7 +388,7 @@ function WindowControls() {
 }
 
 function DoctorPanel() {
-  const [data, setData] = useState<{ ok: boolean; issues: string[]; details: Record<string, any> } | null>(null);
+  const [data, setData] = useState<{ ok: boolean; issues: string[]; details: Record<string, any>; suggestions?: { issue: string; suggestion: string }[] } | null>(null);
   async function refresh() {
     const j = await fetch("/telemetry/doctor/self-check").then((r) => r.json());
     setData(j);
@@ -392,6 +406,16 @@ function DoctorPanel() {
             <li key={i} style={{ color: "#b91c1c" }}>{x}</li>
           ))}
         </ul>
+      )}
+      {data.suggestions && data.suggestions.length > 0 && (
+        <div style={{ marginTop: 6 }}>
+          <div style={{ fontWeight: 600 }}>Suggestions</div>
+          <ul>
+            {data.suggestions.map((s, i) => (
+              <li key={i}><strong>{s.issue}:</strong> {s.suggestion}</li>
+            ))}
+          </ul>
+        </div>
       )}
       <pre style={{ whiteSpace: "pre-wrap" }}>{JSON.stringify(data.details, null, 2)}</pre>
       <button onClick={refresh} style={{ padding: "6px 12px" }}>Re-run</button>

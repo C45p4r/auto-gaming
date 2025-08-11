@@ -18,7 +18,7 @@ from app.config import settings
 from pathlib import Path
 import base64
 from datetime import datetime
-from app.diagnostics.doctor import run_self_check
+from app.diagnostics.doctor import run_self_check, suggestions_for
 from app.actions.executor import execute
 from app.actions.types import BackAction, WaitAction, SwipeAction
 
@@ -124,7 +124,7 @@ async def memory_recent(limit: int = 20) -> list[dict[str, Any]]:
 @router.get("/doctor/self-check")
 async def doctor_self_check() -> dict[str, Any]:
     res = run_self_check()
-    return {"ok": res.ok, "issues": res.issues, "details": res.details}
+    return {"ok": res.ok, "issues": res.issues, "details": res.details, "suggestions": suggestions_for(res)}
 
 
 @router.post("/control/act")
