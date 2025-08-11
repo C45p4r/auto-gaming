@@ -113,7 +113,10 @@ function App() {
         ["suggestions", "Suggestions"],
         ["logs", "Client Logs"],
       ].map(([key, label]) => (
-        <a key={key as string} href={`#/${key}`} style={{ padding: "4px 8px", borderRadius: 6, background: route === key ? "#e5e7eb" : "#f3f4f6", textDecoration: "none", color: "inherit" }}>
+        <a
+          key={key as string}
+          href={`#/${key}`}
+          style={{ padding: "4px 8px", borderRadius: 6, background: route === key ? "#e5e7eb" : "#f3f4f6", textDecoration: "none", color: "inherit" }}>
           {label as string}
         </a>
       ))}
@@ -125,13 +128,28 @@ function App() {
       <h1>auto-gaming</h1>
       <section style={{ position: "sticky", top: 0, background: "var(--bg, #fff)", paddingBottom: 8, zIndex: 10 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={() => fetch("/telemetry/control/start", { method: "POST" })} style={{ padding: "6px 12px", background: "#10b981", color: "#fff", borderRadius: 6, border: 0 }}>Start</button>
-          <button onClick={() => fetch("/telemetry/control/pause", { method: "POST" })} style={{ padding: "6px 12px", background: "#f59e0b", color: "#fff", borderRadius: 6, border: 0 }}>Pause</button>
-          <button onClick={() => fetch("/telemetry/control/stop", { method: "POST" })} style={{ padding: "6px 12px", background: "#ef4444", color: "#fff", borderRadius: 6, border: 0 }}>Stop</button>
+          <button
+            onClick={() => fetch("/telemetry/control/start", { method: "POST" })}
+            style={{ padding: "6px 12px", background: "#10b981", color: "#fff", borderRadius: 6, border: 0 }}>
+            Start
+          </button>
+          <button
+            onClick={() => fetch("/telemetry/control/pause", { method: "POST" })}
+            style={{ padding: "6px 12px", background: "#f59e0b", color: "#fff", borderRadius: 6, border: 0 }}>
+            Pause
+          </button>
+          <button
+            onClick={() => fetch("/telemetry/control/stop", { method: "POST" })}
+            style={{ padding: "6px 12px", background: "#ef4444", color: "#fff", borderRadius: 6, border: 0 }}>
+            Stop
+          </button>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
             <label>
               Theme
-              <select value={theme} onChange={(e) => setTheme(e.target.value)} style={{ marginLeft: 6 }}>
+              <select
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                style={{ marginLeft: 6 }}>
                 <option value="light">Light</option>
                 <option value="dark">Dark</option>
                 <option value="system">System</option>
@@ -185,18 +203,50 @@ function App() {
           <section className="card">
             <h2>Performance</h2>
             <div className="grid-3">
-              <Stat label="FPS" value={status.fps !== undefined ? status.fps.toFixed(2) : "-"} />
-              <Stat label="Actions" value={status.actions ?? 0} />
-              <Stat label="Taps" value={status.taps ?? 0} />
-              <Stat label="Swipes" value={status.swipes ?? 0} />
-              <Stat label="Backs" value={status.backs ?? 0} />
-              <Stat label="Blocks" value={status.blocks ?? 0} />
-              <Stat label="Stuck" value={status.stuck_events ?? 0} />
-              <Stat label="Window OK" value={status.window_ok ? "Yes" : "No"} />
-              <Stat label="Capture" value={status.capture_backend ?? "-"} />
-              <Stat label="Input" value={status.input_backend ?? "-"} />
+              <Stat
+                label="FPS"
+                value={status.fps !== undefined ? status.fps.toFixed(2) : "-"}
+              />
+              <Stat
+                label="Actions"
+                value={status.actions ?? 0}
+              />
+              <Stat
+                label="Taps"
+                value={status.taps ?? 0}
+              />
+              <Stat
+                label="Swipes"
+                value={status.swipes ?? 0}
+              />
+              <Stat
+                label="Backs"
+                value={status.backs ?? 0}
+              />
+              <Stat
+                label="Blocks"
+                value={status.blocks ?? 0}
+              />
+              <Stat
+                label="Stuck"
+                value={status.stuck_events ?? 0}
+              />
+              <Stat
+                label="Window OK"
+                value={status.window_ok ? "Yes" : "No"}
+              />
+              <Stat
+                label="Capture"
+                value={status.capture_backend ?? "-"}
+              />
+              <Stat
+                label="Input"
+                value={status.input_backend ?? "-"}
+              />
             </div>
-            <div style={{ marginTop: 6, color: "#6b7280", fontSize: 12 }}>Model: {status.model_policy} {status.model_id_policy}</div>
+            <div style={{ marginTop: 6, color: "#6b7280", fontSize: 12 }}>
+              Model: {status.model_policy} {status.model_id_policy}
+            </div>
           </section>
         </>
       )}
@@ -204,7 +254,7 @@ function App() {
       {route === "logs" && (
         <section className="card">
           <h2>Client Logs</h2>
-          <div style={{ maxHeight: 420, overflow: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12 }}>
+          <div style={{ height: 420, overflowY: "auto", background: "#111", color: "#0f0", padding: 8, fontFamily: "Consolas, monospace", fontSize: 12 }}>
             {log.map((line, i) => (
               <div key={i}>{line}</div>
             ))}
@@ -232,7 +282,10 @@ function App() {
           <div>Prioritize: {guidance.prioritize.join(", ") || "-"}</div>
           <div>Avoid: {guidance.avoid.join(", ") || "-"}</div>
           <HelpPromptBox current={guidance.help_prompt || ""} />
-          <GuidanceEditor current={guidance} onSaved={() => {}} />
+          <GuidanceEditor
+            current={guidance}
+            onSaved={() => {}}
+          />
         </section>
       )}
 
