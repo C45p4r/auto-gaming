@@ -12,6 +12,7 @@ from app.state.encoder import GameState
 from app.state.profile import is_mode_locked
 from app.telemetry.bus import bus
 from app.memory.store import MemoryStore
+from app.services.search.web_ingest import fetch_urls, summarize
 
 Candidate = tuple[float, object, str]
 
@@ -102,26 +103,43 @@ def vote(candidates: list[Candidate]) -> Candidate:
 
 
 async def orchestrate(state: GameState) -> Candidate:
-    # Learning-first: consult memory before proposing actions to bias away from known dead-ends
+    # Learning-first: consult memory (always) and optionally do a quick web search if memory is empty
+    locked_labels: list[str] = []
+    suggested_labels: list[str] = []
     try:
         store = MemoryStore()
         hints = (state.ocr_text or "").strip().splitlines()
         query = " ".join(hints[:2]) or ("|".join(state.ocr_tokens[:6]) if state.ocr_tokens else "")
+        facts = []
         if query:
             facts = store.search(query, top_k=5)
-            # Surface to UI for transparency
             await bus.publish_step("memory:search", {"query": query[:120], "top": [f.title for f in facts[:3]]})
-            # If any fact indicates a lock for a known label, downweight that path globally during this orchestration
-            locked_labels = [
-                f.title.split(":")[-1]
-                for f in facts
-                if any(s in f.summary.lower() for s in ("locked", "unlock after", "you can enter after")) and f.title.startswith("ui:button:")
-            ]
-            if locked_labels:
-                # Publish as context; heuristic already respects is_mode_locked; this is a soft nudge
-                await bus.publish_step("memory:locked_labels", {"labels": locked_labels[:5]})
+        if not facts and query:
+            # Lightweight web query (single) to enrich memory quickly
+            try:
+                docs = fetch_urls([f"https://www.google.com/search?q=Epic7%20{query}"])
+                new_facts = [store.Fact(id=None, title=d.title, source_url=d.url, summary=summarize(d)) for d in docs]  # type: ignore[attr-defined]
+            except Exception:
+                new_facts = []  # type: ignore[assignment]
+            if new_facts:
+                store.add_facts(new_facts)  # type: ignore[arg-type]
+                await bus.publish_step("memory:ingest", {"added": [f.title for f in new_facts[:3]]})
+                facts = store.search(query, top_k=5)
+        for f in facts:
+            low = f.summary.lower()
+            if f.title.startswith("ui:button:"):
+                lbl = f.title.split(":", 1)[-1]
+                if any(s in low for s in ("locked", "unlock after", "you can enter after")):
+                    locked_labels.append(lbl)
+        # naive suggestions from OCR keywords
+        for k in ("episode", "side story", "event", "shop", "summon"):
+            if k in (state.ocr_text or "").lower():
+                suggested_labels.append(k)
+        if locked_labels:
+            await bus.publish_step("memory:locked_labels", {"labels": locked_labels[:5]})
     except Exception:
-        pass
+        locked_labels = []
+        suggested_labels = []
     agents: list[Callable[[], Candidate]] = [
         lambda: agent_policy(state),
         lambda: agent_mechanics(state),
@@ -133,6 +151,33 @@ async def orchestrate(state: GameState) -> Candidate:
         tasks = [run_with_timeout(fn, settings.agent_timeout_s) for fn in agents]
         results = await asyncio.gather(*tasks)
         candidates = [r for r in results if r is not None]
+        # Adjust scores using memory signals
+        adjusted: list[Candidate] = []
+        for sc, act, who in candidates:
+            try:
+                label = None
+                if hasattr(state, "ui_buttons") and state.ui_buttons and hasattr(act, "x") and hasattr(act, "y") and state.img_width and state.img_height:
+                    ax = int(getattr(act, "x"))
+                    ay = int(getattr(act, "y"))
+                    ix = int(ax / max(1, int(settings.input_base_width)) * state.img_width)
+                    iy = int(ay / max(1, int(settings.input_base_height)) * state.img_height)
+                    best_d = 1e9
+                    for b in state.ui_buttons:
+                        cx = b.x + b.w // 2
+                        cy = b.y + b.h // 2
+                        d = (cx - ix) ** 2 + (cy - iy) ** 2
+                        if d < best_d:
+                            best_d = d
+                            label = b.label
+                # Penalize locked labels, slightly boost suggested labels
+                if label and label in locked_labels:
+                    sc -= 0.3
+                if label and label in suggested_labels:
+                    sc += 0.1
+            except Exception:
+                pass
+            adjusted.append((sc, act, who))
+        candidates = adjusted
         if not candidates:
             continue
         # simple critique pass could adjust scores; here pass-through
