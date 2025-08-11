@@ -36,6 +36,7 @@ from app.state.profile import mark_mode_done
 from app.policy.bandit import ContextualBandit
 from app.analytics.metrics import compute_reward
 from app.perception.ui_elements import detect_ui_buttons
+from app.perception.clickmap import record_tap_outcome, click_score, suggest_explore_points
 
 
 RunState = Literal["idle", "running", "paused", "stopped"]
@@ -373,6 +374,8 @@ class AgentRunner:
                 except Exception:
                     pass
                 if not settings.dry_run:
+                    # Before execution, capture a hash to detect change after action
+                    before_fp = (state.ocr_text or "").strip().lower()[:200]
                     execute(action)
                     # naive action counters by class name
                     name = action.__class__.__name__
@@ -443,6 +446,20 @@ class AgentRunner:
                 except Exception:
                     pass
                 consec_errors = 0
+                # Learn clickmap outcome: for TapAction, observe whether OCR changed
+                try:
+                    if name == "TapAction":
+                        # Re-capture a quick frame to check change minimally
+                        img2 = capture_frame()
+                        st2 = encode_state(img2)
+                        after_fp = (st2.ocr_text or "").strip().lower()[:200]
+                        changed = (after_fp != before_fp)
+                        # Convert the tapped coords to base space (already base) and record
+                        ax = int(getattr(action, "x", 0))
+                        ay = int(getattr(action, "y", 0))
+                        record_tap_outcome(ax, ay, changed)
+                except Exception:
+                    pass
                 # Backup/retry mechanic on repeated identical state+action
                 try:
                     current_hash = getattr(state, "state_hash", None)

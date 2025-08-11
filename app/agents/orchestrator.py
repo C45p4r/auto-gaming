@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 from app.config import settings
 from app.policy.heuristic import propose_action
+from app.perception.clickmap import click_score, suggest_explore_points
 from app.config import settings
 from app.services.hf.policy import HFPolicy
 from app.services.hf.judge import HFJudge
@@ -51,6 +52,17 @@ def agent_policy(state: GameState) -> Candidate:
             pass
     # Fallback to heuristic
     score, action = propose_action(state)
+    # Adjust score using clickmap knowledge: boost likely-buttons, nudge unknowns, penalize static
+    try:
+        if hasattr(action, "x") and hasattr(action, "y"):
+            ax = int(getattr(action, "x"))
+            ay = int(getattr(action, "y"))
+            s = click_score(ax, ay, radius_cells=1)
+            # Map score in [0,1] to adjustment around 0: unknown ~0.5 => ~0 bonus
+            adj = (s - 0.5) * 0.2  # ±0.1 max
+            score = float(score) + adj
+    except Exception:
+        pass
     # Penalize actions that target a locked mode if we can infer from ui_buttons
     try:
         label = None
@@ -211,8 +223,14 @@ async def orchestrate(state: GameState) -> Candidate:
         base_w =  max(1, int(getattr(__import__('app.config').config.settings, 'input_base_width', 1280)))
         base_h =  max(1, int(getattr(__import__('app.config').config.settings, 'input_base_height', 720)))
         import random
-        x = int(base_w * (0.35 + random.random() * 0.30))
-        y = int(base_h * (0.30 + random.random() * 0.30))
+        # Prefer low-trial cells from clickmap to encourage discovering buttons
+        pts = suggest_explore_points(k=5)
+        if pts:
+            cx, cy = random.choice(pts)
+            x, y = int(cx), int(cy)
+        else:
+            x = int(base_w * (0.35 + random.random() * 0.30))
+            y = int(base_h * (0.30 + random.random() * 0.30))
         return 0.1, TapAction(x=x, y=y), "fallback"
     # Use HF judge if configured
     if settings.hf_model_id_judge:

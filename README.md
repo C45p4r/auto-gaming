@@ -665,10 +665,17 @@ The agent includes a lightweight contextual bandit to guide exploration.
 - Arms: high‑level targets such as `episode`, `side story`, `battle`, `hunt`, `arena`, `summon`, `shop`, `sanctuary`.
 - Reward shaping: positive for `daily_progress` increases; negative for `blocks`, `stuck_events`, and `decision_latency_ms` increases.
 - Safety: locked features (learned from popups/memory) are skipped by heuristic and down‑weighted by orchestrator.
+ - Clickmap learning: the agent records whether taps change the screen and builds a persistent grid of likely-buttons vs static regions to guide future exploration.
 
 Notes:
 
 - The bandit now derives eligible arms from all visible UI button labels and avoids locked ones; it also boosts exploration when the screen is unchanged to break loops.
+
+Clickmap learning (auto-discovery):
+
+- Persists at `data/clickmap.json` as a coarse grid in base-space (40 px cells).
+- Each tap updates success/fail counts based on OCR change after the action.
+- Policy boosts score near high-success cells (likely buttons), slightly nudges unknown cells, and downweights consistently static areas.
 
 OCR ensemble configuration:
 
