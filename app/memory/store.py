@@ -78,7 +78,14 @@ class MemoryStore:
             return
         embedder = self._get_embedder()
         corpus = [f"{title}. {summary}" for (_id, title, _src, summary) in rows_full]
-        embs = embedder.encode(corpus, normalize_embeddings=True)
+        # Stream encoding to reduce peak memory
+        batch_size = 64
+        vecs_list: list[np.ndarray] = []
+        for i in range(0, len(corpus), batch_size):
+            chunk = corpus[i : i + batch_size]
+            embs = embedder.encode(chunk, normalize_embeddings=True)
+            vecs_list.append(np.asarray(embs, dtype="float32"))
+        embs = np.concatenate(vecs_list, axis=0) if vecs_list else np.zeros((0, 384), dtype="float32")
         vecs = np.asarray(embs, dtype="float32")
         self._embeddings = vecs
         self._index = faiss.IndexFlatIP(vecs.shape[1])
