@@ -58,8 +58,9 @@ class HFPolicy:
         base_w = settings.input_base_width
         base_h = settings.input_base_height
         guidance = (
-            "Rules: do NOT open external links/programs; do NOT sell/remove heroes or equipment; "
-            "prefer safe navigation steps."
+            "Role: You are a pro Epic Seven player making optimal, safe moves.\n"
+            "Primary objectives: maximize resources, complete quests, unlock characters, obtain strong equipment, and progress menus efficiently.\n"
+            "Rules: do NOT open external links/programs; do NOT sell/remove heroes or equipment; prefer safe navigation steps."
         )
         return (
             "You control a mobile game via actions. Propose ONE next action as strict JSON, no prose.\n"

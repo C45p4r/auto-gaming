@@ -40,6 +40,11 @@ def propose_action(state: GameState) -> tuple[float, object]:
     global _last_ocr_fingerprint, _repeat_count, _last_choice_idx
     metrics = compute_metrics(state)
     score = score_metrics(metrics)
+    # Bias toward progress: small preference for moving toward common progression menus
+    progress_keywords = ("episode", "battle", "quest", "event", "summon", "shop", "arena")
+    text_lower = (state.ocr_text or "").lower()
+    if any(k in text_lower for k in progress_keywords):
+        score += 0.05
 
     # Avoid hammering: back off when OCR text hasn't changed across frames
     fp = _fingerprint(state.ocr_text)
