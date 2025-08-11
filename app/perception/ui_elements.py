@@ -34,18 +34,24 @@ _KNOWN_BUTTONS: list[tuple[str, float, float, float, float]] = [
 ]
 
 
-def detect_ui_buttons(image: Image.Image, ocr_text: str, ocr_tokens: Sequence[str] | None = None) -> List[UiButton]:
+def detect_ui_buttons(
+    image: Image.Image,
+    ocr_text: str,
+    ocr_tokens: Sequence[str] | None = None,
+    require_text: bool = False,
+) -> List[UiButton]:
     text = (ocr_text or "").lower()
     token_set = set((ocr_tokens or []))
     w, h = image.size
     found: list[UiButton] = []
     for label, xf, yf, wf, hf in _KNOWN_BUTTONS:
-        if (label in text) or (label in token_set):
-            cx = int(xf * w)
-            cy = int(yf * h)
-            bw = max(8, int(wf * w))
-            bh = max(8, int(hf * h))
-            x = max(0, min(w - 1, cx - bw // 2))
-            y = max(0, min(h - 1, cy - bh // 2))
-            found.append(UiButton(label=label, x=x, y=y, w=bw, h=bh))
+        if require_text and not ((label in text) or (label in token_set)):
+            continue
+        cx = int(xf * w)
+        cy = int(yf * h)
+        bw = max(8, int(wf * w))
+        bh = max(8, int(hf * h))
+        x = max(0, min(w - 1, cx - bw // 2))
+        y = max(0, min(h - 1, cy - bh // 2))
+        found.append(UiButton(label=label, x=x, y=y, w=bw, h=bh))
     return found

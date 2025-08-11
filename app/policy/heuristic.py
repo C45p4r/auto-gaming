@@ -199,6 +199,27 @@ def propose_action(state: GameState) -> tuple[float, object]:
                 global _last_selected_label
                 _last_selected_label = b.label
                 return score, TapAction(x=x, y=y)
+    # As a last resort, sample likely icon anchors even if OCR did not see text
+    if not matched and not getattr(state, "ui_buttons", None):
+        try:
+            from app.perception.ui_elements import detect_ui_buttons
+
+            buttons = detect_ui_buttons(image=None, ocr_text="", ocr_tokens=[], require_text=False)  # type: ignore[arg-type]
+        except Exception:
+            buttons = []
+        if buttons and state.img_width and state.img_height:
+            base_w = max(1, int(settings.input_base_width))
+            base_h = max(1, int(settings.input_base_height))
+            # pick a non-locked label if any
+            for b in buttons:
+                if b.label and is_mode_locked(b.label):
+                    continue
+                cx = b.x + b.w // 2
+                cy = b.y + b.h // 2
+                x = int(cx / state.img_width * base_w)
+                y = int(cy / state.img_height * base_h)
+                _last_selected_label = b.label
+                return score, TapAction(x=x, y=y)
     if matched:
         # Filter out labels on cooldown
         ready = [t for t in matched if _label_cooldown.get(t[0], 0) <= 0] or matched

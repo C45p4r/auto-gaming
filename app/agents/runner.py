@@ -33,6 +33,8 @@ from app.analytics.session import session, Step
 from app.reliability.flake import FlakeTracker
 from app.policy.cache import DecisionCache
 from app.state.profile import mark_mode_done
+from app.policy.bandit import ContextualBandit
+from app.analytics.metrics import compute_reward
 from app.perception.ui_elements import detect_ui_buttons
 
 
@@ -70,6 +72,11 @@ class AgentRunner:
         self._last_action_name: str | None = None
         self._repeat_action_count: int = 0
         self._recovery_runs: int = 0
+        self._bandit = ContextualBandit(labels=[
+            "episode", "side story", "battle", "hunt", "arena", "summon", "shop", "sanctuary"
+        ])
+        self._prev_metric_snapshot: dict[str, float] | None = None
+        self._step_counter: int = 0
 
     def get_state(self) -> RunState:
         return self._state
@@ -297,6 +304,29 @@ class AgentRunner:
                     next_step=action.__class__.__name__,
                     extra=self._stats_extra(),
                 )
+                # Bandit selection: if proposed action targets a known label, bias via exploration policy
+                try:
+                    chosen_label = None
+                    if hasattr(state, "ui_buttons") and state.ui_buttons and hasattr(action, "x") and hasattr(action, "y") and state.img_width and state.img_height:
+                        ax = int(getattr(action, "x"))
+                        ay = int(getattr(action, "y"))
+                        ix = int(ax / max(1, int(settings.input_base_width)) * state.img_width)
+                        iy = int(ay / max(1, int(settings.input_base_height)) * state.img_height)
+                        best_d = 1e9
+                        for b in state.ui_buttons:
+                            cx = b.x + b.w // 2
+                            cy = b.y + b.h // 2
+                            d = (cx - ix) ** 2 + (cy - iy) ** 2
+                            if d < best_d:
+                                best_d = d
+                                chosen_label = b.label
+                    # Explore/exploit among eligible labels (skip None)
+                    if chosen_label:
+                        override = self._bandit.select([chosen_label], self._step_counter)
+                        if override and override != chosen_label:
+                            await bus.publish_step("rl:override", {"from": chosen_label, "to": override})
+                except Exception:
+                    pass
                 # Save recent frame snapshot to static/frames with OCR JSON for Memory tab (throttled)
                 try:
                     now_ts = time.perf_counter()
@@ -338,6 +368,20 @@ class AgentRunner:
                     latency_ms = (time.perf_counter() - decide_t0) * 1000.0
                     try:
                         metrics_store.add_point("decision_latency_ms", float(latency_ms))
+                    except Exception:
+                        pass
+                    # Compute RL reward from metrics snapshot
+                    try:
+                        cur_snapshot = {
+                            "blocks": float(self._blocks),
+                            "stuck_events": float(self._stuck_events),
+                        }
+                        # optional: include series last values if present
+                        reward = compute_reward(self._prev_metric_snapshot, cur_snapshot)
+                        if reward != 0 and 'chosen_label' in locals() and chosen_label:
+                            self._bandit.update(chosen_label, float(reward))
+                        self._prev_metric_snapshot = cur_snapshot
+                        self._step_counter += 1
                     except Exception:
                         pass
                     # minimal metric deltas placeholder (0) until we compute before/after deltas

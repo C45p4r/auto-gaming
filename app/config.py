@@ -78,5 +78,12 @@ class Settings(BaseSettings):
     max_consec_errors: int = Field(default=5, alias="MAX_CONSEC_ERRORS")
     error_backoff_s: float = Field(default=2.0, alias="ERROR_BACKOFF_S")
 
+    # Reinforcement Learning (bandit)
+    rl_enabled: bool = Field(default=True, alias="RL_ENABLED")
+    rl_method: str = Field(default="bandit", alias="RL_METHOD")  # bandit|off
+    rl_eps_start: float = Field(default=0.2, alias="RL_EPS_START")
+    rl_eps_end: float = Field(default=0.05, alias="RL_EPS_END")
+    rl_persist_path: str = Field(default="data/policy.json", alias="RL_PERSIST_PATH")
+
 
 settings = Settings()
