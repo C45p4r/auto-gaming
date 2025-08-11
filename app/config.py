@@ -55,6 +55,9 @@ class Settings(BaseSettings):
 
     # Logging
     logs_dir: str = Field(default="logs", alias="LOGS_DIR")
+    log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    log_to_ws: bool = Field(default=True, alias="LOG_TO_WS")
+    log_ring_size: int = Field(default=1000, alias="LOG_RING_SIZE")
 
     # Hugging Face / LLM
     huggingface_hub_token: str | None = Field(default=None, alias="HUGGINGFACE_HUB_TOKEN")

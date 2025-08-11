@@ -35,6 +35,7 @@ class TelemetryBus:
         self._subscribers: set[asyncio.Queue[dict[str, Any]]] = set()
         self._status: dict[str, Any] = {"task": None, "confidence": None, "next": None}
         self._decision_log: list[DecisionLogEntry] = []
+        self._log_ring: list[dict[str, Any]] = []
         self._guidance_path = Path("data/guidance.json")
         self._guidance: Guidance = self._load_guidance() or Guidance(
             goals=[
@@ -65,6 +66,21 @@ class TelemetryBus:
             for q in list(self._subscribers):
                 with suppress(Exception):
                     q.put_nowait(message)
+
+    async def publish_log(self, level: str, logger: str, msg: str) -> None:
+        item = {
+            "timestamp_utc": datetime.now(tz=UTC).isoformat(),
+            "level": level,
+            "logger": logger,
+            "msg": msg,
+        }
+        self._log_ring.append(item)
+        try:
+            from app.config import settings as _settings
+            self._log_ring = self._log_ring[-int(getattr(_settings, "log_ring_size", 1000)) :]
+        except Exception:
+            self._log_ring = self._log_ring[-1000:]
+        await self._broadcast({"type": "log", "data": item})
 
     async def publish_status(
         self,
@@ -126,6 +142,9 @@ class TelemetryBus:
 
     def get_decision_log(self) -> list[dict[str, Any]]:
         return [e.__dict__ for e in self._decision_log]
+
+    def recent_logs(self, limit: int = 200) -> list[dict[str, Any]]:
+        return list(self._log_ring[-int(limit) :])
 
     def get_guidance(self) -> Guidance:
         return self._guidance

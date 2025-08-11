@@ -41,6 +41,9 @@ async def status() -> dict[str, Any]:
 @router.get("/decisions")
 async def decisions() -> list[dict[str, Any]]:
     return bus.get_decision_log()
+@router.get("/logs")
+async def recent_logs(limit: int = 200) -> list[dict[str, Any]]:
+    return bus.recent_logs(limit)
 
 
 @router.post("/guidance")
